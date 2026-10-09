@@ -1,0 +1,59 @@
+name: frontend
+
+x-web-common: &web-common
+  build:
+    context: .
+    dockerfile: dev.Dockerfile
+  env_file:
+    - .env
+  volumes:
+    - .:/app
+    # node_modules живет в томе, чтобы не затираться монтированием кода с хоста
+    - node_modules:/app/node_modules
+
+services:
+  web:
+    <<: *web-common
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    networks:
+      default:
+      shared:
+        # проксирование /api на backend идет по адресу http://backend:8000 (алиас из backend-проекта)
+    command: pnpm dev --host 0.0.0.0
+
+  # Unit- и компонентные тесты. Запуск: docker compose run --rm tests [аргументы vitest]
+  tests:
+    <<: *web-common
+    profiles: ["tests"]
+    restart: "no"
+    command: pnpm test
+
+  # E2E-тесты. Нужен поднятый backend и сервис web. Запуск: docker compose run --rm e2e [аргументы playwright]
+  # Версия образа должна совпадать с версией @playwright/test в package.json
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.55.0-noble
+    profiles: ["e2e"]
+    restart: "no"
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      E2E_BASE_URL: http://web:5173
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    depends_on:
+      - web
+    command: npx playwright test
+
+networks:
+  # Общая сеть для связи с контейнерами из других compose-проектов (например, backend).
+  # Создается один раз: docker network create dev-network
+  shared:
+    name: dev-network
+    external: true
+
+volumes:
+  node_modules:

@@ -1,0 +1,19 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Окружения и секреты
+.env
+.env.local
+
+# Тесты, покрытие, отчеты
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Логи и IDE
+*.log
+.idea/
+.vscode/
