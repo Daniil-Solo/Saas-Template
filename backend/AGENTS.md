@@ -33,7 +33,8 @@
 - alembic/ - миграции базы данных
 - docs/ - документация
   - architecture/ - mermaid-диаграммы проекта
-    - architecture.md - C4-диаграмма компонентов системы (уровень контейнеров)
+    - architecture.md - диаграммы компонентов системы (в том числе C4, уровень контейнеров)
+    - deployment.md - схемы развертывания (локально и production)
     - data_model.md - ER-диаграмма (модель данных)
   - usecases/ - текстовое описание фичей с предложениями по реализации
   - development.md - запуск проекта, линтеров, миграций и тестов
@@ -91,10 +92,19 @@
 
 ## Таблицы БД (SQLAlchemy Core)
 
-Актуальный список таблиц смотри в `src/infrastructure/sqlalchemy/models.py`, схему связей - в `docs/architecture/data_model.md`.
+Источник истины - ER-диаграмма `docs/architecture/data_model.md`; модели в `src/infrastructure/sqlalchemy/models.py` должны ей соответствовать.
 
 1. users - пользователи
 
+
+## Документация - источник истины
+
+Диаграммы в `docs/architecture/` (`architecture.md`, `data_model.md`, `deployment.md`) - источник истины и отправная точка разработки. Код следует за диаграммами, а не наоборот.
+
+- Перед реализацией фичи прочитай релевантные диаграммы и описание в `docs/usecases/`
+- Если фича меняет состав системы (новый контейнер, воркер, внешний сервис), модель данных (таблица, поле, связь, enum) или развертывание, то СНАЧАЛА обнови соответствующую диаграмму, и только потом пиши код, миграции и конфигурацию
+- Если код и диаграмма расходятся, не подгоняй молча ни одно под другое: сообщи пользователю о расхождении и предложи, что менять
+- В конце задачи убедись, что диаграммы соответствуют результату
 
 ## Архитектурные слои
 
@@ -127,32 +137,32 @@
 - Всегда реализуй эндпоинты, dao, сервисные функции по аналогии с уже существующими
 - Название сервисных функций в application слое формируется без указания сущности (`create`, `get_by_id`, `update`, `delete`), поскольку из файла `application/{entities}/{entity}.py` и так понятно, к какой сущности относится функция. В роутерах сервис импортируется как модуль: `from src.application.entities import entities as entities_service`, вызов - `entities_service.create(...)`
 - Никогда не размещай обращение к SQL внутри сервисных функций, всегда создавай для этого дополнительные методы DAO
-- Не пиши код alembic-миграции вручную, генерируй её командой `$DC exec app alembic revision --autogenerate -m "..."`, затем проверь результат и не переписывай его без необходимости. Накатывать миграции на базу не нужно, если пользователь об этом не просил
+- Не пиши код alembic-миграции вручную, генерируй её командой `docker compose exec app alembic revision --autogenerate -m "..."`, затем проверь результат и не переписывай его без необходимости. Накатывать миграции на базу не нужно, если пользователь об этом не просил
 - Никогда не используй импорты внутри функций, методов. Импорты должны быть строго в начале файла
 - Не храни секреты и ключи в коде и в репозитории: все значения берутся из `src/settings/` (pydantic-settings), а новые переменные окружения добавляются в `.example.env`
 - Не удаляй docker-тома (`down -v`) и не трогай основную БД вне миграций без явной просьбы пользователя: в ней лежат данные разработки
 
 ## Dev-окружение (Docker)
 
-Файлы окружения: `dev.docker-compose.yml`, `dev.Dockerfile`, `.example.env`. Сервисы: `app` (FastAPI, порт 8000, hot reload, код монтируется томом), `worker` (профиль `worker`), `tests` (профиль `tests`), `db` (PostgreSQL), `s3` (MinIO), `s3-init` (создает бакет), `redis`.
+Файлы окружения: `dev.docker-compose.yml`, `dev.Dockerfile`, `.example.env`. Сервисы: `app` (FastAPI, порт 8000, hot reload, код монтируется томом), `worker` (профиль `worker`), `tests` (профиль `tests`), `db` (PostgreSQL), `s3` (MinIO), `redis`.
 
-Везде ниже `$DC` - это `docker compose -f dev.docker-compose.yml`.
+Файл `dev.docker-compose.yml` подключается через `COMPOSE_FILE` в `.env`, поэтому все команды выполняются из папки `backend/` как обычный `docker compose ...`.
 
 Первый запуск:
 ```bash
 cp .example.env .env                  # если .env еще нет; значения из примера рабочие для dev
 docker network create dev-network     # один раз; общая сеть для связи с другими проектами (например, frontend)
-$DC up -d --build app                 # поднимает app вместе с db, s3, redis
+docker compose up -d --build app                 # поднимает app вместе с db, s3, redis
 ```
 
 Основные команды:
 ```bash
-$DC exec app alembic upgrade head            # применить миграции
-$DC exec app ruff check src tests            # линтер
-$DC exec app mypy src                        # типы
-$DC run --rm tests                           # все тесты
-$DC run --rm tests pytest tests/path -k name # выборочный запуск
-$DC logs --tail=100 app                      # логи
+docker compose exec app alembic upgrade head            # применить миграции
+docker compose exec app ruff check src tests            # линтер
+docker compose exec app mypy src                        # типы
+docker compose run --rm tests                           # все тесты
+docker compose run --rm tests pytest tests/path -k name # выборочный запуск
+docker compose logs --tail=100 app                      # логи
 ```
 Если контейнер `app` не запущен, вместо `exec` используй `run --rm app ...`.
 
@@ -165,16 +175,16 @@ $DC logs --tail=100 app                      # логи
 После изменения кода выполни и исправь замечания:
 
 ```bash
-$DC exec app ruff check src tests
-$DC exec app ruff format src tests
-$DC exec app mypy src
+docker compose exec app ruff check src tests
+docker compose exec app ruff format src tests
+docker compose exec app mypy src
 ```
 
-Если задача затрагивает эндпоинт, сервис или DAO, запусти относящиеся к ним тесты (`$DC run --rm tests ...`), а перед завершением - весь набор. В ответе сообщи, что запускалось и каков результат; если что-то не удалось запустить, скажи об этом прямо.
+Если задача затрагивает эндпоинт, сервис или DAO, запусти относящиеся к ним тесты (`docker compose run --rm tests ...`), а перед завершением - весь набор. В ответе сообщи, что запускалось и каков результат; если что-то не удалось запустить, скажи об этом прямо.
 
 ## Флоу реализации эндпоинта, сервисной функции (application), DAO, DTO и SQLAlchemy-модели
 
-Порядок: модель и enum → DTO → DAO (интерфейс, реализация, DI, UoW) → сервис → роутер → тесты → миграция. Ниже `entities` - плейсхолдер названия сущности.
+Порядок: обновить ER-диаграмму `docs/architecture/data_model.md` → модель и enum → DTO → DAO (интерфейс, реализация, DI, UoW) → сервис → роутер → тесты → миграция. Ниже `entities` - плейсхолдер названия сущности.
 
 ### Создание SQLAlchemy-модели
 
@@ -437,7 +447,7 @@ __all__ = ["v1_router"]
 
 ## Флоу тестирования эндпоинта
 
-Тесты запускаются в Docker командой `$DC run --rm tests`. Сервисы `db`, `s3` и `redis` поднимаются автоматически. Тестовая база данных создается тестами (`tests/conftest.py`) на том же сервере PostgreSQL отдельно от основной и удаляется после прогона, поэтому основная БД не затрагивается. Пользователь БД должен иметь право `CREATEDB` (в dev это владелец `DB_USER`).
+Тесты запускаются в Docker командой `docker compose run --rm tests`. Сервисы `db`, `s3` и `redis` поднимаются автоматически. Тестовая база данных создается тестами (`tests/conftest.py`) на том же сервере PostgreSQL отдельно от основной и удаляется после прогона, поэтому основная БД не затрагивается. Пользователь БД должен иметь право `CREATEDB` (в dev это владелец `DB_USER`).
 
 Для каждого эндпоинта создается отдельный файл с тестами (пример: `tests/interfaces/api/v1/users/test_create.py`)
 

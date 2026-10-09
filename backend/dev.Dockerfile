@@ -8,12 +8,11 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_LINK_MODE=copy \
-    UV_FROZEN=1 \
     PATH="/opt/venv/bin:$PATH"
 
 # Зависимости ставятся отдельным слоем для кеширования (вместе с dev-группой: ruff, mypy, pytest)
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-install-project
+RUN uv sync --no-install-project --frozen
 
 COPY . /app
 
