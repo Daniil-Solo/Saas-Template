@@ -47,29 +47,55 @@ flowchart LR
 - Браузер ходит только на Vite (`:5173`); запросы `/api/*` Vite проксирует на backend, поэтому CORS в dev не нужен.
 - В `dev-network` подключен только `app` (алиас `backend`). БД, S3 и Redis недоступны из других проектов и опубликованы на хосте только на `127.0.0.1`.
 
-### Production (ориентир)
+### Production
 
-Для production в шаблоне пока нет готовых файлов. Рекомендуемая схема для одного сервера в Docker:
+Production разворачивается на одном сервере через Docker из корня репозитория. Файлы: `prod.docker-compose.yml`, `Caddyfile`, `.example.env` (шаблон `.env`), `backend/prod.Dockerfile`, `frontend/prod.Dockerfile`, `frontend/nginx.conf`.
 
 ```mermaid
 flowchart TD
-    user("Пользователь") -->|":80/:443"| caddy("reverse proxy: Caddy")
+    user("Пользователь") -->|":80/:443"| caddy("caddy: reverse proxy + HTTPS")
 
-    caddy -->|"/"| web("web: Nginx + SPA (dist)")
-    caddy -->|"/api"| api("api: FastAPI")
+    subgraph edge["Сеть edge"]
+        caddy
+        web("web: Nginx + SPA (dist) :8080")
+        api("api: FastAPI :8000")
+        worker("worker: Python")
+    end
 
-    api --> db[("db: PostgreSQL")]
-    api --> redis[("cache: Redis")]
-    api --> s3[("storage: MinIO / S3")]
+    subgraph data["Сеть data (internal, без выхода в интернет)"]
+        migrate("migrate: alembic upgrade head<br>(одноразовая задача)")
+        db[("db: PostgreSQL")]
+        redis[("redis: Redis")]
+        s3[("s3: MinIO")]
+    end
 
-    worker("worker: Python") --> db
+    caddy -->|"/"| web
+    caddy -->|"/api (кроме /api/internal)"| api
+
+    migrate --> db
+    api --> db
+    api --> redis
+    api --> s3
+    worker --> db
+    worker --> redis
     worker --> s3
 ```
 
-При развертывании:
-- наружу публикуется только reverse proxy, остальные сервисы доступны во внутренней docker-сети;
+Запуск:
+
+```bash
+cp .example.env .env              # заполнить все значения <...> уникальными секретами
+docker compose up -d --build
+```
+
+Безопасность:
+- на хосте опубликованы только порты 80 и 443 сервиса `caddy`; БД, Redis и MinIO (в том числе консоль) снаружи недоступны, их сеть `data` помечена `internal` и не имеет выхода в интернет;
+- `api` и `worker` подключены к обеим сетям (им нужен доступ к данным и во внешние API), `web` и `caddy` - только к `edge`;
+- Caddy автоматически выпускает HTTPS-сертификаты для `DOMAIN`, добавляет security-заголовки и скрывает `/api/internal/*` (healthcheck);
+- контейнеры работают без root (кроме штатных образов БД), с `no-new-privileges`, отброшенными capabilities и read-only файловой системой у приложений;
+- обязательные секреты заданы без значений по умолчанию (`${VAR:?}`): без заполненного `.env` compose не стартует; `.env` в git не попадает, значения из `.example.env` использовать нельзя;
 - API и SPA живут на одном origin, поэтому `VITE_API_URL` остается пустым; в бандл не попадают секреты: всё из `VITE_*` публично;
-- секреты backend (`AUTH_SECRET_KEY`, `SECURITY_ENCRYPTION_KEY`, пароли БД/Redis/S3) заменяются на уникальные значения, значения из `.example.env` использовать нельзя;
-- данные PostgreSQL, MinIO и Redis хранятся в docker-томах с регулярным резервным копированием;
-- статика SPA кешируется по хешу в имени файла, `index.html` - без кеша;
+- миграции применяет сервис `migrate` перед запуском `api` и `worker`;
+- данные PostgreSQL, MinIO и Redis хранятся в docker-томах, резервное копирование настраивается отдельно;
+- статика SPA кешируется по хешу в имени файла (`/assets/`), `index.html` - без кеша;
 - при необходимости мониторинга добавляются Prometheus, Loki и Grafana, но шаблон их не включает.

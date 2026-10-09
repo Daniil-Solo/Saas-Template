@@ -1,0 +1,26 @@
+# Единственная точка входа в систему. TLS-сертификаты Let's Encrypt выпускаются автоматически
+# для домена из переменной DOMAIN (DNS-запись должна указывать на сервер, порты 80 и 443 открыты).
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Внутренние эндпоинты (healthcheck и пр.) снаружи недоступны
+	@internal path /api/internal /api/internal/*
+	respond @internal 404
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:8080
+	}
+}
