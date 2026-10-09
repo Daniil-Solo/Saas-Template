@@ -46,6 +46,8 @@ docker compose run --rm web pnpm add -D <пакет>         # добавить 
 docker compose up -d --build web                        # пересобрать образ
 ```
 
+TypeScript закреплён на `~6.0`: `@hey-api/openapi-ts` пока не работает с нативным TypeScript 7 (нет JS API), поэтому при `pnpm add` не поднимайте major-версию.
+
 UI-компоненты shadcn добавляются командой `docker compose run --rm web pnpm dlx shadcn@latest add <компонент>`.
 
 ### Линтер, форматирование, типы
