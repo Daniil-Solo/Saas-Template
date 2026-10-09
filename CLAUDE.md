@@ -6,7 +6,7 @@
 
 - `backend/` — API (FastAPI, Alembic, pytest); `frontend/` — SPA (React, Vite, biome, vitest, Playwright).
 - `docs/` — `deployment.md` (диаграмма развертывания), `usecases/` (фичи продукта), `workflow.md` (воркфлоу разработки фичи).
-- `.plan/` — планы реализации (`.plan/<YYYYMMDD-HHMM>_<фича>.md`); шаги отмечаются в плане сразу после выполнения — это память между сессиями.
+- `.plan/` — локальные планы реализации, в git не коммитятся (`.plan/<YYYYMMDD-HHMM>_<фича>.md`); шаги отмечаются в плане сразу после выполнения — это память между сессиями.
 - `scripts/run_dev.sh` — запуск всего dev-стенда (up|down|logs); `prod.docker-compose.yml` + `Caddyfile` — прод.
 
 ## Где что читать
