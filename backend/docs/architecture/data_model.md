@@ -9,10 +9,15 @@ erDiagram
     users {
         integer id PK
         string fullname
-        string email
+        string email UK
         string hashed_password
         bool is_verified
         bool is_admin
         datetime created_at
     }
 ```
+
+Примечания к `users`:
+- `email` уникален.
+- `is_verified` при создании пользователя равен `true`. Это упрощение шаблона: в реальном проекте здесь должна быть верификация email (письмо со ссылкой), а `is_verified` должен создаваться как `false`.
+- `is_admin` по умолчанию `false`, `created_at` заполняется на стороне БД (`now()`).

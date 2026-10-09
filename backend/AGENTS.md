@@ -83,10 +83,11 @@
     - tasks/ - фоновые задачи (заглушка)
   - settings/ - настройки
 - tests/ - тесты (структура зеркалит `src/`)
+  - endpoints/ - обертки над эндпоинтами для тестов: `EndpointRegistry` (фикстура `api`), классы групп (`AuthEndpoints`, `UsersEndpoints`, ...), `ResponseWrapper`
   - interfaces/api/v1/{entities}/ - тесты эндпоинтов, один файл на эндпоинт
   - factories/ - Factory-классы для генерации данных
-  - helpers/ - вспомогательные функции для тестов
-  - conftest.py - фикстуры (uow, container, client, тестовая БД)
+  - helpers/ - вспомогательные функции для тестов (создание данных в БД, токены)
+  - conftest.py - фикстуры (container, uow, api, тестовая БД, миграции)
 
 ## Таблицы БД (SQLAlchemy Core)
 
@@ -411,60 +412,73 @@ __all__ = ["v1_router"]
 
 ## Флоу тестирования эндпоинта
 
-Тесты запускаются в Docker командой `docker compose run --rm tests`. Сервисы `db`, `s3` и `redis` поднимаются автоматически. Тестовая база данных создается тестами (`tests/conftest.py`) на том же сервере PostgreSQL отдельно от основной и удаляется после прогона, поэтому основная БД не затрагивается. Пользователь БД должен иметь право `CREATEDB` (в dev это владелец `DB_USER`).
+### Запуск
 
-Для каждого эндпоинта создается отдельный файл с тестами (пример: `tests/interfaces/api/v1/users/test_create.py`)
+Тесты запускаются в Docker: `docker compose --profile tests run --rm tests` (профиль `tests` указывать обязательно: без него `run` теряет переменные из `env_file`). Зависимости (`db`, `redis`) поднимаются автоматически. Выборочный запуск: `docker compose --profile tests run --rm tests pytest tests/path -k name`.
+
+Тестовая база данных `test_<DB_NAME>` создается тестами (`tests/conftest.py`) на том же сервере PostgreSQL отдельно от основной, миграции накатываются alembic'ом, после прогона база удаляется, поэтому основная БД не затрагивается. Таблицы очищаются перед каждым тестом. Пользователь БД должен иметь право `CREATEDB` (в dev это владелец `DB_USER`).
+
+### Фикстуры
+
+- `container` - инициализирует DI-контейнер и чистит таблицы;
+- `uow` - `UnitOfWork` для подготовки и проверки данных в БД (зависит от `container`);
+- `api` - `EndpointRegistry` для вызова эндпоинтов (зависит от `container`). Фикстуры `client` нет: HTTP-клиент скрыт внутри реестра.
+
+Каждый тест обязательно использует `uow`, `container` или `api`: они инициализируют DI-контейнер для сервисных функций.
+
+### EndpointRegistry и ResponseWrapper
+
+Эндпоинты в тестах вызываются только через `api`: `await api.auth.login(data)`, `await api.users.me(token)`. Группы эндпоинтов описаны классами в `tests/endpoints/` (наследники `BaseEndpoints`), а в `EndpointRegistry` доступны одноименными свойствами (`auth`, `users`, `internal`). Новый эндпоинт: метод в классе группы; новая группа: класс в `tests/endpoints/` и свойство в `EndpointRegistry`.
+
+Метод эндпоинта принимает DTO (или `dict` для заведомо невалидных payload) и возвращает `ResponseWrapper[SomeDTO]` (`tests/endpoints/response.py`), в который передаются ответ, DTO ответа и успешный статус (по умолчанию 200; для списков - `TypeAdapter(list[SomeDTO])`). Методы обертки:
+
+- `validate()` - проверяет успешный статус и возвращает DTO;
+- `expected_error_status(status_code, code=None)` - ожидаемая бизнес-ошибка: проверяет HTTP-статус и (если передан) поле `code` в теле; возвращает сырой `Response`;
+- `expect_validation_error(message=None, field=None)` - ожидаемый 422: опционально проверяет подстроку в тексте ошибки и имя поля;
+- сырой ответ доступен через `response`, `status_code`, `headers`, `json()` для специфичных проверок (заголовки, отсутствие поля в теле).
+
+Не пиши в тестах ручные `assert response.status_code == ...` и `Model.model_validate_json(response.text)`: для этого есть обертка.
+
+### Структура теста
+
+Для каждого эндпоинта создается отдельный файл с тестами (пример: `tests/interfaces/api/v1/auth/test_register.py`)
 
 ```python
 from fastapi import status
-from httpx import AsyncClient, Response
-import pytest_asyncio
 
-from src.dto.users import UserCreateDTO, UserResponseDTO
-from tests.factories.users import UserFactory
+from tests.factories.users import UserRegisterFactory
 from tests.helpers.users import create_users
 
 
-@pytest_asyncio.fixture()
-def request_create_user(client: AsyncClient):
-    async def inner(data: UserCreateDTO) -> Response:
-        return await client.post("/api/v1/users", json=data.model_dump(by_alias=True))
+async def test__success(uow, api):
+    data = UserRegisterFactory.build()
 
-    return inner
+    token = (await api.auth.register(data)).validate()
 
-
-@pytest_asyncio.fixture()
-def create_user(request_create_user):
-    async def inner(data: UserCreateDTO) -> UserResponseDTO:
-        response = await request_create_user(data)
-        assert response.status_code == status.HTTP_200_OK
-        return UserResponseDTO.model_validate_json(response.text)
-
-    return inner
-
-
-async def test__success(uow, create_user):
-    data: UserCreateDTO = UserFactory.build()
-
-    user = await create_user(data)
-    assert user.email == data.email
+    async with uow.connection():
+        user = await uow.users.get_by_email(data.email)
+    assert token.token_type == "bearer"
     assert user.fullname == data.fullname
-    assert not user.is_admin
 
 
-async def test__failed__duplicated_email(uow, request_create_user):
+async def test__failed__duplicated_email(uow, api):
     created_user = (await create_users(uow))[0]
-    data: UserCreateDTO = UserFactory.build(email=created_user.email)
+    data = UserRegisterFactory.build(email=created_user.email)
 
-    response = await request_create_user(data)
-    assert response.status_code == status.HTTP_409_CONFLICT
-    assert response.json()["code"] == "user_email_exists"
+    (await api.auth.register(data)).expected_error_status(status.HTTP_409_CONFLICT, "user_email_exists")
+
+
+async def test__failed__short_password(container, api):
+    payload = {"fullname": "Test", "email": "test@example.com", "password": "short"}
+
+    (await api.auth.register(payload)).expect_validation_error("at least 8 characters", field="password")
 ```
 
 Важно:
-- Тест в качестве обязательной фикстуры всегда должен использовать uow или container (они инициализируют DI-контейнер для работы сервисных функций)
 - Подготовка данных для создания объектов в БД должна осуществляться через Factory-классы (`tests/factories/`)
-- Если в тестах повторяются какие-то операции, их следует вынести во вспомогательные функции (`tests/helpers/`)
+- Если в тестах повторяются какие-то операции, их следует вынести во вспомогательные функции (`tests/helpers/`): создание пользователей (`create_users`), выпуск токенов (`make_token`, `encode_raw_token`)
 - Конвенция по наименованию тестов: `test__success` - успешный, `test__failed__not_admin` - проваленный тест
-- Покрывай успешный сценарий, ошибки валидации, отсутствие прав (401/403) и отсутствие сущности (404)
-- Для тестов, в которых возвращается список моделей, используй синтаксис: `TypeAdapter(list[EntityDTO]).validate_json(response.text)`
+- Покрывай успешный сценарий, ошибки валидации (с проверкой поля), границы значений, отсутствие прав (401/403) и отсутствие сущности (404)
+- Для эндпоинтов с аутентификацией проверяй: нет заголовка, мусорный токен, просроченный токен, чужую подпись, токен удаленного пользователя
+- Сценарии, специфичные для одного теста (параллельные запросы, перехеширование), остаются в самом тесте, а не в обертке
+- Для тестов, в которых возвращается список моделей, используй `TypeAdapter(list[EntityDTO])` в качестве типа ответа в `ResponseWrapper`

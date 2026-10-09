@@ -64,11 +64,13 @@ docker compose exec app alembic downgrade -1                         # отка�
 ### Тесты
 
 ```bash
-docker compose run --rm tests                            # все тесты
-docker compose run --rm tests pytest tests/path -k name  # выборочный запуск
+docker compose --profile tests run --rm tests                            # все тесты
+docker compose --profile tests run --rm tests pytest tests/path -k name  # выборочный запуск
 ```
 
 Тестовая база создается автоматически на сервере `db`, основная БД не затрагивается.
+
+Эндпоинты в тестах вызываются через фикстуру `api` (`EndpointRegistry` из `tests/endpoints/`): `await api.auth.login(data)`, `await api.users.me(token)`. Новая группа эндпоинтов добавляется классом в `tests/endpoints/` и свойством в `EndpointRegistry`.
 
 ### Создание нового проекта из шаблона
 
