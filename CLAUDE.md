@@ -5,7 +5,8 @@
 ## Структура
 
 - `backend/` — API (FastAPI, Alembic, pytest); `frontend/` — SPA (React, Vite, biome, vitest, Playwright).
-- `docs/` — `deployment.md` (диаграмма развертывания), `usecases/` (фичи продукта).
+- `docs/` — `deployment.md` (диаграмма развертывания), `usecases/` (фичи продукта), `workflow.md` (воркфлоу разработки фичи).
+- `.plan/` — планы реализации (`.plan/<YYYYMMDD-HHMM>_<фича>.md`); шаги отмечаются в плане сразу после выполнения — это память между сессиями.
 - `scripts/run_dev.sh` — запуск всего dev-стенда (up|down|logs); `prod.docker-compose.yml` + `Caddyfile` — прод.
 
 ## Где что читать
@@ -18,6 +19,7 @@
 
 ## Правила
 
+- Новая фича или крупное изменение — строго по `docs/workflow.md`: юзкейс → план в `.plan/` → диаграммы → backend → клиент API → frontend; на каждом «стопе» жди ответа пользователя.
 - Диаграммы (`docs/deployment.md`, `*/docs/architecture/`) — источник истины. Меняется состав системы, модель данных, страницы или маршруты → сначала обновить диаграммы, потом код и compose-файлы.
 - Общий код (auth, users, shared, infrastructure) расширять, а не переписывать, если не попросили иначе.
 - Всё запускается в Docker (ruff, mypy, pytest, pnpm, biome, vitest и т.д.); на хост зависимости не ставить. Команды выполнять из `backend/` или `frontend/` через `docker compose ...`.
