@@ -2,7 +2,11 @@
 
 ## О проекте
 
-Здесь будет краткая информация о проекте
+Это backend-шаблон для быстрого старта приложений (в том числе microSaaS). Репозиторий содержит общий рабочий код, который нужен почти любому приложению: аутентификация, пользователи, работа с БД, миграции, DI, хранилище S3, отправка email, rate limiting, LLM-инфраструктура, логирование, healthcheck, CLI.
+
+Предметная логика конкретного продукта добавляется поверх шаблона: новые сущности, сервисы и эндпоинты создаются по флоу из раздела «Флоу реализации» ниже. Существующий общий код (auth, users, infrastructure) расширяй, а не переписывай, если пользователь явно не попросил об обратном.
+
+Описание конкретного продукта (если оно есть) лежит в `docs/usecases/`. Перед реализацией новой фичи проверь, нет ли там описания.
 
 
 ## Технологический стек
@@ -14,63 +18,60 @@
 - Базы данных: sqlalchemy (Core), alembic, asyncpg (основной), psycopg2-binary (миграции)
 - LLM-пайплайн: openai, jinja2 (шаблон промпта), tiktoken
 - Конфигурация: pydantic-settings
-- Аутентификация: pyjwt
+- Аутентификация: pyjwt, argon2-cffi (хеширование паролей)
 - Хранилище: boto3 (S3)
 - Уведомления: maileroo (сервис отправки писем), jinja2 (шаблон письма)
 - Rate limiting: redis
 - Логирование: structlog
+- Тесты: pytest, pytest-asyncio, httpx, factory-boy
+
 
 ## Структура проекта
 
+Дерево ниже описывает ключевые директории. Актуальное содержимое смотри в файловой системе, а не полагайся на этот список как на исчерпывающий.
+
 - alembic/ - миграции базы данных
-- docs - документация
-  - architecture/ - основные mermaid-диаграммы проекта
+- docs/ - документация
+  - architecture/ - mermaid-диаграммы проекта
     - architecture.md - C4-диаграмма компонентов системы (уровень контейнеров)
-    - data_model.md - ER-диаграмма (модель данных, 12 сущностей)
+    - data_model.md - ER-диаграмма (модель данных)
   - usecases/ - текстовое описание фичей с предложениями по реализации
-  - development.md - инструкции для запуска проекта и линтеров
-- src - весь исходный код проекта
-  - application - сервисы бизнес-логики
+  - development.md - запуск проекта, линтеров, миграций и тестов
+- src/ - весь исходный код проекта
+  - application/ - сервисы бизнес-логики
     - auth/ - сервис аутентификации (login, register)
     - health/ - сервис проверки здоровья
     - users/ - сервисы для работы с пользователями
     - exceptions.py - кастомные исключения (ApplicationError и др.)
   - di/ - контейнер dependency-injector
     - container.py - объявление всех зависимостей
-  - dto - Data Transfer Objects для API и Service слоев
+  - dto/ - Data Transfer Objects для API и Service слоев
     - auth/ - DTO для аутентификации (UserLoginDTO, TokenDTO, UserRegisterDTO)
     - users/ - DTO для пользователей (UserCreateDTO, UserDTO)
     - common.py - базовые DTO (BaseDTO, SuccessOperationDTO)
   - constants/ - константы и перечисления для сущностей
     - users.py - enums для User (UserType)
-  - infrastructure - коннекторы к базе данных и внешним сервисам
-    - auth/ - утилиты аутентификации (JWT, хеширование паролей SHA256+salt)
+  - infrastructure/ - коннекторы к базе данных и внешним сервисам
+    - auth/ - утилиты аутентификации
       - jwt.py - создание и декодирование JWT
-      - password.py - хеширование паролей
+      - password.py - хеширование паролей (argon2)
     - dao/ - Data Access Object для работы с БД
       - users/ - DAO пользователей
-    - llm/ - инфраструктура для работы с LLM
-      - base.py - BaseLLM, Message, Answer
-      - openai_like.py - OpenAI-совместимый клиент
     - sqlalchemy/ - модели и таблицы БД
       - models.py - все таблицы SQLAlchemy Core
       - engine.py - асинхронный engine и session factory
       - uow.py - UnitOfWork, агрегация всех DAO для одной сессии
     - storage/ - хранилище S3
       - interface.py - абстрактный интерфейс
-      - s3.py - S3 storage для решений
+      - s3.py - реализация через S3
     - ai/ - AI инфраструктура
-      - llm/ - LLM интерфейс и реализации
+      - llm/ - LLM интерфейс и реализации (base.py: BaseLLM, Message, Answer; openai_like.py: OpenAI-совместимый клиент)
       - prompt_builder/ - построитель промптов (jinja2)
-    - email_sender/ - отправка email
-      - interface.py - абстрактный интерфейс
-      - maileroo.py - реализация через Maileroo
-    - email_templater/ - шаблоны email
-      - interface.py - абстрактный интерфейс
-      - jinja2.py - реализация через Jinja2
+    - email_sender/ - отправка email (interface.py, maileroo.py)
+    - email_templater/ - шаблоны email (interface.py, jinja2.py)
     - redis/ - Redis клиент
-  - interfaces - различные точки входа в приложение
-    - api - содержит эндпоинты API
+  - interfaces/ - различные точки входа в приложение
+    - api/ - эндпоинты API
       - v1/ - эндпоинты версии v1
         - auth/ - аутентификация (POST /api/v1/auth/login, POST /api/v1/auth/register)
         - users/ - управление пользователями (GET/POST /api/v1/users/*)
@@ -79,27 +80,39 @@
       - app.py - точка входа в приложение с объявлением FastAPI
       - dependencies.py - зависимости для FastAPI (get_current_user)
       - error_status_mapping.py - маппинг ошибок из бизнес-слоя на HTTP-коды
-    - cli - содержит команды для запуска
-    - tasks - фоновые задачи (заглушка)
+    - cli/ - команды для запуска
+    - tasks/ - фоновые задачи (заглушка)
   - settings/ - настройки
+- tests/ - тесты (структура зеркалит `src/`)
+  - interfaces/api/v1/{entities}/ - тесты эндпоинтов, один файл на эндпоинт
+  - factories/ - Factory-классы для генерации данных
+  - helpers/ - вспомогательные функции для тестов
+  - conftest.py - фикстуры (uow, container, client, тестовая БД)
 
 ## Таблицы БД (SQLAlchemy Core)
+
+Актуальный список таблиц смотри в `src/infrastructure/sqlalchemy/models.py`, схему связей - в `docs/architecture/data_model.md`.
 
 1. users - пользователи
 
 
 ## Архитектурные слои
 
-Проект использует слоистую архитектуру:
+Проект использует слоистую архитектуру. Зависимости направлены только вниз:
 
-1. **Interfaces** - точка входа (API, CLI)
-2. **Application** - бизнес-логика
-3. **Infrastructure** - реализация доступа к данным и внешним сервисам
-4. **DTO** - объекты передачи данных между слоями
+1. **Interfaces** - точки входа (API, CLI, tasks). Только валидация входа, вызов сервисной функции и формирование ответа. Бизнес-логики здесь нет
+2. **Application** - бизнес-логика. Работает с БД только через DAO из UnitOfWork, с внешними сервисами - только через интерфейсы infrastructure
+3. **Infrastructure** - реализация доступа к данным и внешним сервисам. Каждая внешняя зависимость описывается абстрактным интерфейсом (`interface.py`) и конкретной реализацией
+4. **DTO** - объекты передачи данных между слоями (сквозной слой, доступен всем)
+
+Правила зависимостей:
+- Application не импортирует ничего из `interfaces`
+- Infrastructure не импортирует ничего из `application` и `interfaces`
+- Бизнес-ошибки - наследники `ApplicationError` из `src/application/exceptions.py`; их превращение в HTTP-коды происходит только в `src/interfaces/api/error_status_mapping.py`. В application и infrastructure `HTTPException` не используется
 
 ## Дополнительные сведения
 
-- `docs/development.md` - инструкции для запуска проекта, линтеров, миграций
+- `docs/development.md` - инструкции для запуска проекта, линтеров, миграций и тестов
 - Все DAO реализуют паттерн Repository через SQLAlchemy Core
 - UnitOfWork управляет сессиями и транзакциями
 - DI-контейнер связывает все зависимости
@@ -107,19 +120,63 @@
 ## Важно
 
 - Отвечай всегда на русском языке
-- Для запуска команд всегда используй: `uv run ...`
-- Для добавления библиотек в проект используй: `uv add ...` вместо прямого добавления в pyproject.toml
-- Для полей DTO всегда указывай описание и возможную валидацию: `Field(description="...")`
+- Все команды проекта (ruff, mypy, alembic, pytest, скрипты) выполняются внутри docker-контейнера, см. раздел «Dev-окружение». На хосте зависимости не устанавливаются
+- Для добавления библиотек в проект используй: `uv add ...` вместо прямого добавления в pyproject.toml, чтобы lock-файл оставался согласованным
+- Для полей DTO всегда указывай описание и возможную валидацию: `Field(description="...")` (описания попадают в OpenAPI-схему)
 - SQLAlchemy используется в режиме Core (императивные таблицы), не ORM; запросы в DAO также составляются с помощью Core
 - Всегда реализуй эндпоинты, dao, сервисные функции по аналогии с уже существующими
-- Название сервисных функций в application слое формируется без указания сущности, поскольку из файла application/{entities}/{entity}.py итак понятно к какой сущности относится функция
-- Никогда не пытайся запустить сам тесты, а также любой Docker-контейнер
-- Не пиши код alembic-миграции вручную, вызывай команду `uv run alembic ...`
+- Название сервисных функций в application слое формируется без указания сущности (`create`, `get_by_id`, `update`, `delete`), поскольку из файла `application/{entities}/{entity}.py` и так понятно, к какой сущности относится функция. В роутерах сервис импортируется как модуль: `from src.application.entities import entities as entities_service`, вызов - `entities_service.create(...)`
+- Никогда не размещай обращение к SQL внутри сервисных функций, всегда создавай для этого дополнительные методы DAO
+- Не пиши код alembic-миграции вручную, генерируй её командой `$DC exec app alembic revision --autogenerate -m "..."`, затем проверь результат и не переписывай его без необходимости. Накатывать миграции на базу не нужно, если пользователь об этом не просил
 - Никогда не используй импорты внутри функций, методов. Импорты должны быть строго в начале файла
+- Не храни секреты и ключи в коде и в репозитории: все значения берутся из `src/settings/` (pydantic-settings), а новые переменные окружения добавляются в `.example.env`
+- Не удаляй docker-тома (`down -v`) и не трогай основную БД вне миграций без явной просьбы пользователя: в ней лежат данные разработки
+
+## Dev-окружение (Docker)
+
+Файлы окружения: `dev.docker-compose.yml`, `dev.Dockerfile`, `.example.env`. Сервисы: `app` (FastAPI, порт 8000, hot reload, код монтируется томом), `worker` (профиль `worker`), `tests` (профиль `tests`), `db` (PostgreSQL), `s3` (MinIO), `s3-init` (создает бакет), `redis`.
+
+Везде ниже `$DC` - это `docker compose -f dev.docker-compose.yml`.
+
+Первый запуск:
+```bash
+cp .example.env .env                  # если .env еще нет; значения из примера рабочие для dev
+docker network create dev-network     # один раз; общая сеть для связи с другими проектами (например, frontend)
+$DC up -d --build app                 # поднимает app вместе с db, s3, redis
+```
+
+Основные команды:
+```bash
+$DC exec app alembic upgrade head            # применить миграции
+$DC exec app ruff check src tests            # линтер
+$DC exec app mypy src                        # типы
+$DC run --rm tests                           # все тесты
+$DC run --rm tests pytest tests/path -k name # выборочный запуск
+$DC logs --tail=100 app                      # логи
+```
+Если контейнер `app` не запущен, вместо `exec` используй `run --rm app ...`.
+
+Сеть: внутри проекта сервисы видят друг друга по именам (`db`, `redis`, `s3`). Контейнеры из других проектов (frontend) подключаются к внешней сети `dev-network` и обращаются к API по адресу `http://backend:8000`. В эту сеть вынесен только `app`, а БД, Redis и S3 снаружи недоступны (на хосте они опубликованы только на 127.0.0.1).
+
+Новая переменная окружения: добавь в `src/settings/` и в `.example.env`, затем (если нужно) в `.env`.
+
+## Проверка перед завершением задачи
+
+После изменения кода выполни и исправь замечания:
+
+```bash
+$DC exec app ruff check src tests
+$DC exec app ruff format src tests
+$DC exec app mypy src
+```
+
+Если задача затрагивает эндпоинт, сервис или DAO, запусти относящиеся к ним тесты (`$DC run --rm tests ...`), а перед завершением - весь набор. В ответе сообщи, что запускалось и каков результат; если что-то не удалось запустить, скажи об этом прямо.
 
 ## Флоу реализации эндпоинта, сервисной функции (application), DAO, DTO и SQLAlchemy-модели
 
-### Создание SQLALchemy-модели
+Порядок: модель и enum → DTO → DAO (интерфейс, реализация, DI, UoW) → сервис → роутер → тесты → миграция. Ниже `entities` - плейсхолдер названия сущности.
+
+### Создание SQLAlchemy-модели
 
 Новая модель добавляется в `src/infrastructure/sqlalchemy/models.py`
 
@@ -129,31 +186,37 @@ entities_table = sa.Table(
     metadata,
     sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
     sa.Column(
-        "other_entities_id",
+        "other_entity_id",
         sa.Integer,
-        sa.ForeignKey("workspaces.id", ondelete="CASCADE", onupdate="CASCADE"),
+        sa.ForeignKey("other_entities.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=False,
     ),
     sa.Column("status", sa.Enum(EntityStatusEnum, name="entities_status"), nullable=False),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-    sa.CheckConstraint("status IN ('VALUE_1', 'VALUE_2')", name="chk_status"),
 )
 ```
 
-EntityStatusEnum задается в Enums `src/constants/entities.py`
+`EntityStatusEnum` задается в `src/constants/entities.py`. После добавления модели сгенерируй миграцию (см. раздел «Важно»).
 
 ### DTO - Data Transfer Object
 
-DTO добавляется в `src/dto/entities/entities.py`
+DTO добавляется в `src/dto/entities/entities.py` (и реэкспортируется в `src/dto/entities/__init__.py`)
 ```python
-from src.dto.common import BaseDTO
+import datetime
+
 from pydantic import Field
+
+from src.constants.entities import EntityStatusEnum
+from src.dto.common import BaseDTO
+
 
 class EntityCreateDTO(BaseDTO):
     status: EntityStatusEnum = Field(description="Статус сущности")
 
-class EntityUpdateDTO(EntityCreateDTO):
-    pass
+
+class EntityUpdateDTO(BaseDTO):
+    status: EntityStatusEnum | None = Field(default=None, description="Статус сущности")
+
 
 class EntityResponseDTO(EntityCreateDTO):
     id: int = Field(description="ID сущности")
@@ -165,6 +228,8 @@ class EntityResponseDTO(EntityCreateDTO):
 Потом создается интерфейс для доступа к данным в `src/infrastructure/dao/entities/interface.py`
 ```python
 from abc import ABC, abstractmethod
+
+from src.dto.entities import EntityCreateDTO, EntityResponseDTO, EntityUpdateDTO
 
 
 class EntitiesDAO(ABC):
@@ -186,56 +251,65 @@ class EntitiesDAO(ABC):
 ```
 При необходимости могут быть добавлены дополнительные методы
 
-
-После этого создаем реализацию интерфейса на SQLALChemy в `src/infrastructure/dao/entities/sqlalchemy.py`
+После этого создаем реализацию интерфейса на SQLAlchemy в `src/infrastructure/dao/entities/sqlalchemy.py`
 ```python
 import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.application.exceptions import EntityNotFoundError
+from src.dto.entities import EntityCreateDTO, EntityResponseDTO, EntityUpdateDTO
 from src.infrastructure.dao.entities.interface import EntitiesDAO
-from src.dto.entities import EntityCreateDTO, EntityUpdateDTO, EntityResponseDTO
+from src.infrastructure.sqlalchemy.models import entities_table
+
 
 class SQLAlchemyEntitiesDAO(EntitiesDAO):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def create(self, data: EntityCreateDTO) -> EntityResponseDTO:
-        query = sa.insert(entities_table).values(**data.model_dump(by_alias=True)).returning(entities_table)
+        query = sa.insert(entities_table).values(**data.model_dump()).returning(entities_table)
         result = await self.session.execute(query)
-        row = result.fetchone()
-        if row is None:
-            raise EntityNotFoundError(message="Сущность не создана")
-        return EntityResponseDTO.model_validate(row)
+        return EntityResponseDTO.model_validate(result.one())
 
     async def get_by_id(self, entity_id: int) -> EntityResponseDTO:
         query = sa.select(entities_table).where(entities_table.c.id == entity_id)
         result = await self.session.execute(query)
-        row = result.fetchone()
+        row = result.one_or_none()
         if row is None:
             raise EntityNotFoundError(message="Сущность не найдена")
         return EntityResponseDTO.model_validate(row)
 
     async def update(self, entity_id: int, data: EntityUpdateDTO) -> EntityResponseDTO:
+        # exclude_unset: обновляются только поля, переданные клиентом
+        values = data.model_dump(exclude_unset=True)
+        if not values:
+            return await self.get_by_id(entity_id)
         query = (
             sa.update(entities_table)
             .where(entities_table.c.id == entity_id)
-            .values(**data.model_dump(by_alias=True))
+            .values(**values)
             .returning(entities_table)
         )
         result = await self.session.execute(query)
-        row = result.fetchone()
+        row = result.one_or_none()
         if row is None:
             raise EntityNotFoundError(message="Сущность не найдена")
         return EntityResponseDTO.model_validate(row)
 
     async def delete(self, entity_id: int) -> None:
-        query = sa.delete(entities_table).where(entities_table.c.id == entity_id)
-        await self.session.execute(query)
+        query = sa.delete(entities_table).where(entities_table.c.id == entity_id).returning(entities_table.c.id)
+        result = await self.session.execute(query)
+        if result.one_or_none() is None:
+            raise EntityNotFoundError(message="Сущность не найдена")
 ```
+
+Для `model_validate(row)` в `BaseDTO` должен быть включен `from_attributes=True`.
 
 Добавляем dao в DI-контейнер в `src/di/container.py`
 ```python
 class Container(containers.DeclarativeContainer):
     ...
-    
+
     entities_dao = providers.Factory(lambda: SQLAlchemyEntitiesDAO)
 
     uow = providers.Factory(
@@ -268,9 +342,9 @@ class UnitOfWork:
             if self._session is not None:
                 ...
                 self._entities = None
-    
+
     ...
-            
+
     @property
     def entities(self) -> EntitiesDAO:
         if self._entities is None:
@@ -279,24 +353,29 @@ class UnitOfWork:
 ```
 
 ### Application Layer
-Создаем сервисные функции в `src/application/entities/entities.py`
+Создаем сервисные функции в `src/application/entities/entities.py` (названия без указания сущности)
 
 ```python
-from dependency_injector import inject
-from dependency_injector.wiring import Provide
+from dependency_injector.wiring import Provide, inject
+
+from src.di.container import Container
+from src.dto.common import SuccessOperationDTO
+from src.dto.entities import EntityCreateDTO, EntityResponseDTO
+from src.dto.users import UserDTO
+from src.infrastructure.sqlalchemy.uow import UnitOfWork
+
 
 @inject
-async def create_entity(
+async def create(
     data: EntityCreateDTO,
-    user: ShortUserDTO,
+    user: UserDTO,  # текущий пользователь; используется для проверки прав доступа
     uow: UnitOfWork = Provide[Container.uow],
-) -> WorkspaceResponseDTO:
+) -> EntityResponseDTO:
     async with uow.connection():
-        entity = await uow.entities.create(data)
-        return entity
+        return await uow.entities.create(data)
 ```
 
-Если в сервисной функции используется последовательное обновление нескольких записей, то такие операции необходимо дополнительно обернуть в транзакцию:
+Если в сервисной функции используется последовательное изменение нескольких записей, то такие операции необходимо дополнительно обернуть в транзакцию:
 ```python
 async with uow.connection() as conn, conn.transaction():
     await operation_1()
@@ -309,7 +388,7 @@ async def init_container() -> Container:
     container = Container()
     container.wire(
         packages=[
-          ...
+            ...
             "src.application.entities",
         ]
     )
@@ -321,24 +400,30 @@ async def init_container() -> Container:
 Эндпоинты добавляются в `src/interfaces/api/v1/entities/router.py`
 ```python
 from fastapi import APIRouter, Depends
+
+from src.application.entities import entities as entities_service
+from src.dto.common import SuccessOperationDTO
+from src.dto.entities import EntityCreateDTO, EntityResponseDTO
+from src.dto.users import UserDTO
 from src.interfaces.api.dependencies import get_current_user
-from src.application.entities import create_entity
 
 router = APIRouter(prefix="/entities", tags=["entities"])
 
+
 @router.post("/", response_model=EntityResponseDTO)
-async def create_workspace_endpoint(
+async def create_entity_endpoint(
     data: EntityCreateDTO,
-    user: ShortUserDTO = Depends(get_current_user),
+    user: UserDTO = Depends(get_current_user),
 ) -> EntityResponseDTO:
-    return await create_entity(data, user)
+    return await entities_service.create(data, user)
 ```
 
-Для операций, которые ничего не возвращают, например, удаление сущности, в качестве ответа возвращается SuccessOperationDTO(message="") из `src/dto/common.py`
+Для операций, которые ничего не возвращают, например, удаление сущности, в качестве ответа возвращается `SuccessOperationDTO(message="")` из `src/dto/common.py`
 
 И импортируем новый роутер в `src/interfaces/api/v1/__init__.py`
 ```python
 from fastapi import APIRouter
+
 from src.interfaces.api.v1.entities.router import router as entities_router
 
 v1_router = APIRouter(prefix="/v1", tags=["v1"])
@@ -348,7 +433,11 @@ v1_router.include_router(entities_router)
 __all__ = ["v1_router"]
 ```
 
+Если новые бизнес-ошибки должны возвращать особый HTTP-код, добавь их в `src/interfaces/api/error_status_mapping.py`.
+
 ## Флоу тестирования эндпоинта
+
+Тесты запускаются в Docker командой `$DC run --rm tests`. Сервисы `db`, `s3` и `redis` поднимаются автоматически. Тестовая база данных создается тестами (`tests/conftest.py`) на том же сервере PostgreSQL отдельно от основной и удаляется после прогона, поэтому основная БД не затрагивается. Пользователь БД должен иметь право `CREATEDB` (в dev это владелец `DB_USER`).
 
 Для каждого эндпоинта создается отдельный файл с тестами (пример: `tests/interfaces/api/v1/users/test_create.py`)
 
@@ -400,8 +489,8 @@ async def test__failed__duplicated_email(uow, request_create_user):
 
 Важно:
 - Тест в качестве обязательной фикстуры всегда должен использовать uow или container (они инициализируют DI-контейнер для работы сервисных функций)
-- Подготовка данных для создания объектов в БД должна осуществляться через Factory-классы
-- Если в тестах повторяются какие-то операции, их следует вынести во вспомогательные функции
-- Конвенция по наименованию тестов: test__success - успешный, test__failed__not_admin - проваленный тест
-- Никогда не размещай обращение к SQL внутри сервисных функций, всегда создавай для этого дополнительные методы DAO
-- Для тестов в которых возвращается список моделей используй синтаксис: `TypeAdapter(list[EntityDTO]).validate_json(response.text)`
+- Подготовка данных для создания объектов в БД должна осуществляться через Factory-классы (`tests/factories/`)
+- Если в тестах повторяются какие-то операции, их следует вынести во вспомогательные функции (`tests/helpers/`)
+- Конвенция по наименованию тестов: `test__success` - успешный, `test__failed__not_admin` - проваленный тест
+- Покрывай успешный сценарий, ошибки валидации, отсутствие прав (401/403) и отсутствие сущности (404)
+- Для тестов, в которых возвращается список моделей, используй синтаксис: `TypeAdapter(list[EntityDTO]).validate_json(response.text)`

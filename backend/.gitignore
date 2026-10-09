@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+wheels/
+
+# Окружения и секреты
+.env
+.venv
+venv/
+*.crt
+
+# Тесты, покрытие, кеши анализаторов
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# IDE
+.idea/
+.vscode/
+
+# Прочее
+*.log
