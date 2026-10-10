@@ -92,6 +92,7 @@ describe("страница приглашений организации", () =>
 
     const link = await screen.findByLabelText("Ссылка-приглашение");
     expect(link).toHaveValue(`${window.location.origin}/invitations/secret-token`);
+    expect(screen.getByText(/Письмо с приглашением отправлено на/)).toBeInTheDocument();
     expect(sentBody).toEqual({ email: "anna@example.com", role_ids: [1] });
   });
 

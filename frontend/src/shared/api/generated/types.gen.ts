@@ -5,6 +5,73 @@ export type ClientOptions = {
 };
 
 /**
+ * EmailEnqueuedDTO
+ */
+export type EmailEnqueuedDto = {
+    /**
+     * Job Id
+     *
+     * ID поставленной задачи
+     */
+    job_id: string;
+};
+
+/**
+ * EmailSendRequestDTO
+ */
+export type EmailSendRequestDto = {
+    /**
+     * Тип письма (см. GET /api/v1/notifications/templates)
+     */
+    template: EmailTemplate;
+    /**
+     * To
+     *
+     * Адрес получателя
+     */
+    to: string;
+    /**
+     * Payload
+     *
+     * Данные письма; схема зависит от шаблона
+     */
+    payload: {
+        [key: string]: unknown;
+    };
+    /**
+     * Idempotency Key
+     *
+     * Ключ идемпотентности: повторный запрос с тем же ключом не ставит письмо второй раз, пока первое в очереди или выполняется
+     */
+    idempotency_key?: string | null;
+};
+
+/**
+ * EmailTemplate
+ *
+ * Типы писем; каждому соответствует папка в `infrastructure/email_templater/templates/`.
+ */
+export type EmailTemplate = 'welcome' | 'invitation';
+
+/**
+ * EmailTemplateInfoDTO
+ */
+export type EmailTemplateInfoDto = {
+    /**
+     * Тип письма
+     */
+    template: EmailTemplate;
+    /**
+     * Payload Schema
+     *
+     * JSON Schema данных письма (payload)
+     */
+    payload_schema: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * ErrorDTO
  */
 export type ErrorDto = {
@@ -1224,6 +1291,62 @@ export type ListPermissionsEndpointApiV1PermissionsGetResponses = {
 };
 
 export type ListPermissionsEndpointApiV1PermissionsGetResponse = ListPermissionsEndpointApiV1PermissionsGetResponses[keyof ListPermissionsEndpointApiV1PermissionsGetResponses];
+
+export type SendEmailEndpointApiV1NotificationsEmailPostData = {
+    body: EmailSendRequestDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/email';
+};
+
+export type SendEmailEndpointApiV1NotificationsEmailPostErrors = {
+    /**
+     * Не администратор системы (admin_required)
+     */
+    403: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SendEmailEndpointApiV1NotificationsEmailPostError = SendEmailEndpointApiV1NotificationsEmailPostErrors[keyof SendEmailEndpointApiV1NotificationsEmailPostErrors];
+
+export type SendEmailEndpointApiV1NotificationsEmailPostResponses = {
+    /**
+     * Successful Response
+     */
+    202: EmailEnqueuedDto;
+};
+
+export type SendEmailEndpointApiV1NotificationsEmailPostResponse = SendEmailEndpointApiV1NotificationsEmailPostResponses[keyof SendEmailEndpointApiV1NotificationsEmailPostResponses];
+
+export type ListTemplatesEndpointApiV1NotificationsTemplatesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/templates';
+};
+
+export type ListTemplatesEndpointApiV1NotificationsTemplatesGetErrors = {
+    /**
+     * Не администратор системы (admin_required)
+     */
+    403: ErrorDto;
+};
+
+export type ListTemplatesEndpointApiV1NotificationsTemplatesGetError = ListTemplatesEndpointApiV1NotificationsTemplatesGetErrors[keyof ListTemplatesEndpointApiV1NotificationsTemplatesGetErrors];
+
+export type ListTemplatesEndpointApiV1NotificationsTemplatesGetResponses = {
+    /**
+     * Response List Templates Endpoint Api V1 Notifications Templates Get
+     *
+     * Successful Response
+     */
+    200: Array<EmailTemplateInfoDto>;
+};
+
+export type ListTemplatesEndpointApiV1NotificationsTemplatesGetResponse = ListTemplatesEndpointApiV1NotificationsTemplatesGetResponses[keyof ListTemplatesEndpointApiV1NotificationsTemplatesGetResponses];
 
 export type HealthEndpointApiInternalHealthGetData = {
     body?: never;

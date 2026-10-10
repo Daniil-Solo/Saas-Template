@@ -1,0 +1,13 @@
+{% extends "_layout.html.j2" %}
+{% from "_button.html.j2" import button %}
+{% block title %}Приглашение в {{ organization_name }}{% endblock %}
+{% block preheader %}{{ invited_by_name }} приглашает вас в организацию «{{ organization_name }}».{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 16px;font-size:22px;line-height:28px;">Приглашение в «{{ organization_name }}»</h1>
+<p style="margin:0 0 12px;">{{ invited_by_name }} приглашает вас присоединиться к организации «{{ organization_name }}» в {{ app_name }}.</p>
+{% if role_names %}
+<p style="margin:0 0 12px;">Ваши роли: {{ role_names | join(", ") }}.</p>
+{% endif %}
+<p style="margin:0;">Приглашение действует до {{ expires_at.strftime("%d.%m.%Y %H:%M") }} UTC.</p>
+{{ button(accept_url, "Принять приглашение") }}
+{% endblock %}

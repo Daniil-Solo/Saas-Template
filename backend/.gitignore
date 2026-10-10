@@ -26,5 +26,8 @@ coverage.xml
 .idea/
 .vscode/
 
+# Предпросмотр писем (CLI email_preview)
+.preview/
+
 # Прочее
 *.log

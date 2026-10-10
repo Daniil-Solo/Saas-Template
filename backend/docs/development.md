@@ -7,7 +7,8 @@
 Файлы окружения: `dev.docker-compose.yml`, `dev.Dockerfile`, `.example.env`. Сервисы:
 
 - `app` - FastAPI, порт 8000, hot reload, код монтируется томом;
-- `worker` - фоновый воркер (профиль `worker`);
+- `worker` - фоновый воркер arq (письма и др.), поднимается вместе с `app`, перезапускается при правке `src`;
+- `mailpit` - SMTP-ловушка для проверки писем (профиль `mail`, http://localhost:8025);
 - `tests` - тесты (профиль `tests`);
 - `db` - PostgreSQL, `s3` - MinIO, `redis` - Redis;
 - `prometheus` - метрики (http://localhost:9090), `grafana` - графики (http://localhost:3000, `admin/admin`, дашборд «HTTP»). Конфиги лежат в `../.infra/`; если порт 3000 занят, задайте `GRAFANA_PORT` в `.env`.
@@ -94,3 +95,25 @@ docker compose exec db psql -U app -d app -c "UPDATE users SET is_admin = true W
 Значения `-U` и `-d` — `DB_USER` и `DB_NAME` из `.env`. Признак читается из БД на каждый запрос, перевыпускать токен не нужно.
 
 Срок действия приглашений задаёт `INVITATION_TTL_DAYS` (по умолчанию 7 дней).
+
+### Фоновые задачи и письма
+
+Письма ставятся в очередь (arq на Redis) и отправляются воркером. Воркер запускается командой `arq src.interfaces.tasks.worker.WorkerSettings` (в dev это сервис `worker`); логи: `docker compose logs -f worker`.
+
+Коннектор выбирает `EMAIL_BACKEND`:
+
+- `console` (по умолчанию) - письмо не отправляется, а пишется в лог воркера целиком (адресат, тема, текст со ссылкой). Только для разработки: при старте API и воркер пишут про это предупреждение;
+- `smtp` - `EMAIL_SMTP_HOST` обязателен; порт, логин/пароль (только парой) и `EMAIL_SMTP_TLS=starttls|ssl|none` - по необходимости;
+- `maileroo` - нужен `EMAIL_MAILEROO_API_KEY`.
+
+Ссылки в письмах строятся от `APP_BASE_URL` (в dev `http://localhost:5173`). Имя отправителя и название сервиса в шапке - `EMAIL_FROM_DISPLAY_NAME`, адрес - `EMAIL_FROM`.
+
+Проверка SMTP локально: `docker compose --profile mail up -d mailpit`, в `.env` - `EMAIL_BACKEND=smtp`, `EMAIL_SMTP_HOST=mailpit`, `EMAIL_SMTP_PORT=1025`, `EMAIL_SMTP_TLS=none`, затем `docker compose up -d app worker`; письма видны на http://localhost:8025.
+
+Предпросмотр шаблонов без отправки (HTML и текст сохраняются в `.preview/`, откройте `.html` в браузере):
+
+```bash
+docker compose run --rm app python -m src.interfaces.cli.email_preview [--template welcome] [--out .preview]
+```
+
+Администратор может поставить любое письмо через `POST /api/v1/notifications/email` (Swagger: http://localhost:8000/docs), каталог типов и схем данных - `GET /api/v1/notifications/templates`.

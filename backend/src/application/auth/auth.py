@@ -3,13 +3,18 @@ import datetime
 from dependency_injector.wiring import Provide, inject
 
 from src.application.exceptions import InvalidCredentialsError, InvalidTokenError, UserNotFoundError
+from src.constants.emails import EmailTemplate
+from src.constants.tasks import TaskName
 from src.di.container import Container
 from src.dto.auth import TokenDTO, UserLoginDTO, UserRegisterDTO
+from src.dto.emails import WelcomeEmailContext
+from src.dto.tasks import SendEmailDTO
 from src.dto.users import UserCreateDTO, UserDTO
 from src.infrastructure.auth import jwt as jwt_utils
 from src.infrastructure.auth import password as password_utils
+from src.infrastructure.queue.interface import TaskQueue
 from src.infrastructure.sqlalchemy.uow import UnitOfWork
-from src.settings import AuthSettings
+from src.settings import AppSettings, AuthSettings
 
 
 def _create_token(user_id: int, auth_settings: AuthSettings) -> TokenDTO:
@@ -27,6 +32,8 @@ async def register(
     data: UserRegisterDTO,
     uow: UnitOfWork = Provide[Container.uow],
     auth_settings: AuthSettings = Provide[Container.auth_settings],
+    app_settings: AppSettings = Provide[Container.app_settings],
+    queue: TaskQueue = Provide[Container.task_queue],
 ) -> TokenDTO:
     user_data = UserCreateDTO(
         fullname=data.fullname,
@@ -38,6 +45,13 @@ async def register(
     )
     async with uow.connection():
         user = await uow.users.create(user_data)
+    # После коммита: воркер должен найти пользователя; приветствие уходит и при регистрации по приглашению
+    welcome = WelcomeEmailContext(fullname=user.fullname, login_url=f"{app_settings.base_url.rstrip('/')}/login")
+    await queue.enqueue(
+        TaskName.SEND_EMAIL,
+        SendEmailDTO(to=user.email, template=EmailTemplate.WELCOME, context=welcome.model_dump(mode="json")),
+        job_id=f"welcome-{user.id}",
+    )
     return _create_token(user.id, auth_settings)
 
 

@@ -4,6 +4,7 @@ from fastapi import status
 
 from src.constants.invitations import InvitationDisplayStatus, InvitationStatus
 from src.constants.permissions import Permission
+from src.constants.tasks import TaskName
 from src.infrastructure.auth import invitation_token
 from tests.factories.organizations import InvitationCreateFactory
 from tests.helpers.auth import make_token
@@ -163,3 +164,34 @@ async def test__failed__no_authorization_header(container, api):
     (await api.invitations.create(1, InvitationCreateFactory.build())).expected_error_status(
         status.HTTP_401_UNAUTHORIZED, "invalid_token"
     )
+
+
+async def test__success__email_task_is_enqueued(uow, api, task_queue):
+    creator = (await create_users(uow))[0]
+    organization = await create_organization(uow, creator)
+
+    result = (
+        await api.invitations.create(organization.id, InvitationCreateFactory.build(), make_token(creator.id))
+    ).validate()
+
+    assert len(task_queue.tasks) == 1
+    task = task_queue.tasks[0]
+    assert task.task == TaskName.SEND_INVITATION_EMAIL
+    assert task.job_id == f"invitation-{result.id}"
+    assert task.payload.invitation_id == result.id
+    assert task.payload.token == result.token
+    assert result.token not in repr(task.payload)
+
+
+async def test__failed__already_member_enqueues_nothing(uow, api, task_queue):
+    creator, member = await create_users(uow, size=2)
+    organization = await create_organization(uow, creator)
+    await add_member(uow, organization, member)
+
+    (
+        await api.invitations.create(
+            organization.id, InvitationCreateFactory.build(email=member.email), make_token(creator.id)
+        )
+    ).expected_error_status(status.HTTP_409_CONFLICT, "member_already_exists")
+
+    assert task_queue.tasks == []

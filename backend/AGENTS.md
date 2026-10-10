@@ -21,8 +21,9 @@
 - Метрики и ошибки: prometheus-client, sentry-sdk
 - Аутентификация: pyjwt, argon2-cffi (хеширование паролей)
 - Хранилище: boto3 (S3)
-- Уведомления: maileroo (сервис отправки писем), jinja2 (шаблон письма)
-- Rate limiting: redis
+- Фоновые задачи: arq (очередь на Redis)
+- Письма: коннекторы `smtp` (aiosmtplib), `maileroo` (httpx) и `console` (лог, по умолчанию); шаблоны писем - jinja2
+- Redis: очередь задач, rate limiting
 - Логирование: structlog
 - Тесты: pytest, pytest-asyncio, httpx, factory-boy
 
@@ -45,6 +46,7 @@
     - organizations/ - организации (`organizations.py`) и участники (`members.py`)
     - roles/ - роли (создание и изменение - только администратор)
     - invitations/ - приглашения: создание, отзыв, просмотр и принятие по токену
+    - notifications/ - письма (`emails.py`): отправка приветствия и приглашения; вызываются задачами воркера
     - permissions/ - перечень прав
     - exceptions.py - кастомные исключения (ApplicationError и др.)
   - di/ - контейнер dependency-injector
@@ -53,8 +55,10 @@
     - auth/ - DTO для аутентификации (UserLoginDTO, TokenDTO, UserRegisterDTO)
     - users/ - DTO для пользователей (UserCreateDTO, UserDTO)
     - organizations/, roles/, invitations/ - DTO организаций, ролей и приглашений
+    - emails/ - контексты шаблонов писем и `EmailMessage`; tasks/ - payload фоновых задач
     - common.py - базовые DTO (BaseDTO, SuccessOperationDTO)
   - constants/ - константы и перечисления для сущностей
+    - emails.py - `EmailTemplate` (перечень шаблонов писем); tasks.py - `TaskName` (имена фоновых задач)
     - permissions.py - `Permission` (права ролей)
     - invitations.py - `InvitationStatus` (хранимый) и `InvitationDisplayStatus` (для API)
   - infrastructure/ - коннекторы к базе данных и внешним сервисам
@@ -73,8 +77,9 @@
     - ai/ - AI инфраструктура
       - llm/ - LLM интерфейс и реализации (base.py: BaseLLM, Message, Answer; openai_like.py: OpenAI-совместимый клиент)
       - prompt_builder/ - построитель промптов (jinja2)
-    - email_sender/ - отправка email (interface.py, maileroo.py)
-    - email_templater/ - шаблоны email (interface.py, jinja2.py)
+    - email_sender/ - коннекторы отправки email (interface.py: `EmailSender`; exceptions.py: `EmailTemporaryError`, `EmailPermanentError`; smtp.py, maileroo.py, console.py)
+    - email_templater/ - рендер писем (interface.py: `EmailTemplater`; jinja2.py; templates/: `_layout.*.j2` и папка на каждое письмо)
+    - queue/ - очередь фоновых задач (interface.py: `TaskQueue`; arq.py)
     - redis/ - Redis клиент
     - observability/ - логирование (logging.py, structlog), метрики Prometheus (metrics.py), Sentry (sentry.py), контекст запроса (context.py)
   - interfaces/ - различные точки входа в приложение
@@ -84,6 +89,7 @@
         - users/ - управление пользователями (GET/POST /api/v1/users/*)
         - organizations/ - организации, участники и приглашения организации (/api/v1/organizations/*)
         - roles/, permissions/, invitations/ - роли, права, принятие приглашений по токену
+        - notifications/ - только админ: POST /api/v1/notifications/email (поставить письмо по типу шаблона и payload), GET /api/v1/notifications/templates (каталог)
       - internal/ - внутренние эндпоинты
         - health.py - GET /api/internal/health
         - metrics.py - GET /api/internal/metrics (метрики Prometheus, вне OpenAPI)
@@ -91,9 +97,9 @@
       - middleware.py - ASGI-middleware: X-Request-ID, запись `http_request` в логе, HTTP-метрики
       - dependencies.py - зависимости для FastAPI (get_current_user, get_current_admin, require_permission)
       - error_status_mapping.py - маппинг ошибок из бизнес-слоя на HTTP-коды
-    - cli/ - команды для запуска
-    - tasks/ - фоновые задачи (заглушка)
-  - settings/ - настройки: группы (`DBSettings`, `AuthSettings`, `LoggingSettings`, `MetricsSettings`, `SentrySettings` и др.) и единый `Settings` с `get_settings()`
+    - cli/ - команды (например, `email_preview` - предпросмотр писем)
+    - tasks/ - воркер arq: `worker.py` (`WorkerSettings`), задачи по областям (`emails.py`)
+  - settings/ - настройки: группы (`DBSettings`, `AuthSettings`, `RedisSettings`, `EmailSettings`, `SmtpSettings`, `MailerooSettings`, `LoggingSettings`, `MetricsSettings`, `SentrySettings` и др.) и единый `Settings` с `get_settings()`
 - tests/ - тесты (структура зеркалит `src/`)
   - endpoints/ - обертки над эндпоинтами для тестов: `EndpointRegistry` (фикстура `api`), классы групп (`AuthEndpoints`, `UsersEndpoints`, ...), `ResponseWrapper`
   - interfaces/api/v1/{entities}/ - тесты эндпоинтов, один файл на эндпоинт
@@ -428,6 +434,39 @@ __all__ = ["v1_router"]
 ```
 
 Если новые бизнес-ошибки должны возвращать особый HTTP-код, добавь их в `src/interfaces/api/error_status_mapping.py`.
+
+## Фоновые задачи (arq)
+
+В фон выносится действие, результат которого не нужен в ответе клиенту и которое может быть долгим или упасть без отмены основной операции (письма, обращения к внешним API, LLM). Если результат нужен сразу - это обычная сервисная функция.
+
+Схема: сервис в `application` ставит задачу через `TaskQueue` → arq/Redis → воркер вызывает тонкую функцию-задачу в `interfaces/tasks/` → она вызывает сервисную функцию в `application`. Бизнес-логика живёт только в сервисной функции, поэтому её можно вызвать и из API, и из воркера, и из теста.
+
+Правила:
+- `arq` импортируется только в `infrastructure/queue/` и `interfaces/tasks/`. Application работает с интерфейсом `TaskQueue` из DI: `await queue.enqueue(TaskName.SEND_EMAIL, SendEmailDTO(to=user.email, template=EmailTemplate.WELCOME, context=welcome.model_dump(mode="json")), job_id=f"welcome-{user.id}")`
+- Имя задачи - значение `TaskName` (`src/constants/tasks.py`), payload - pydantic DTO из `src/dto/tasks/`. В payload кладутся id сущностей, а не объекты и не данные, которые можно перечитать из БД. Секреты в payload запрещены; единственное исключение - одноразовый токен приглашения (в БД только его хеш), оно описано в плане фичи
+- Ставь задачу только после коммита транзакции, то есть вне `async with uow.connection()`: иначе воркер может не найти запись. Redis считается доступным всегда: сбой постановки отдельно не обрабатывается
+- Задача идемпотентна и сама перечитывает состояние из БД (приглашение могли отозвать, пока задача ждала в очереди) и пропускает работу, если она уже не нужна. Для защиты от дублей задавай детерминированный `job_id`
+- Ретраи: временную ошибку (`*TemporaryError`) функция-задача превращает в `arq.Retry(defer=...)` с растущей паузой, `max_tries=5`; постоянную (`*PermanentError`) не повторяет и пишет `logger.error`. Новые внешние сервисы заводят такую же пару исключений
+- В логи задач не попадают email, токены и тела писем (только `task`, `job_id`, `attempt`, шаблон)
+- Воркер поднимает свой DI-контейнер, логирование и Sentry в `on_startup`, закрывает контейнер в `on_shutdown`. Запуск: `arq src.interfaces.tasks.worker.WorkerSettings`; новая задача добавляется в `WorkerSettings.functions`
+- Постановка не атомарна с БД (outbox нет): задача, поставленная после коммита, может потеряться при падении Redis или процесса. Если для новой фичи потеря недопустима, обсуди с пользователем outbox до реализации
+- В тестах `task_queue` в контейнере заменён на `FakeTaskQueue`: проверяй, что поставлена нужная задача с нужным payload; логику задачи тестируй прямым вызовом функции-задачи или сервисной функции
+
+Новая фоновая задача: имя в `TaskName` → DTO payload → сервисная функция в `application/<область>/` → функция-задача в `interfaces/tasks/<область>.py` и регистрация в `WorkerSettings` → вызов `enqueue` из сервиса → тесты.
+
+## Письма: коннекторы и шаблоны
+
+Письма отправляются только из фоновых задач (см. выше), никогда из обработчика запроса.
+
+**Коннекторы.** `EmailSender` (`infrastructure/email_sender/interface.py`) принимает `EmailMessage` и бросает `EmailTemporaryError` или `EmailPermanentError`. Реализация выбирается переменной `EMAIL_BACKEND` (`console` по умолчанию, `smtp`, `maileroo`) через `providers.Selector` в DI-контейнере. Новый коннектор: класс-наследник `EmailSender` → группа настроек со своим префиксом `EMAIL_<NAME>_` (поля необязательные) → проверка обязательных полей в валидаторе `Settings` (сообщение называет переменную) → значение в `EMAIL_BACKEND` и строка в `Selector` → переменные в оба `.example.env` → общий контрактный тест коннекторов. При `EMAIL_BACKEND=console` API и воркер пишут при старте предупреждение (`warning`), что письма не отправляются.
+
+**Шаблоны.** `EmailTemplater.render(template, context)` возвращает `subject`, `html` и `text`. `template` - член `EmailTemplate` (`src/constants/emails.py`), `context` - pydantic DTO из `src/dto/emails/`; шаблон рендерится со `StrictUndefined`, поэтому пропущенная переменная - ошибка, а не пустое место. Файлы лежат в `infrastructure/email_templater/templates/`: общие `_layout.html.j2` и `_layout.txt.j2`, и папка `<template>/` с `subject.txt.j2`, `body.html.j2` (расширяет каркас), `body.txt.j2`.
+
+Правила вёрстки HTML-писем: таблицы и inline-стили (без внешнего CSS, JS и картинок), ширина 560 px, акцентный цвет и шрифт - переменные в начале каркаса, кнопка + дублирующая ссылка под ней, скрытый прехедер, поддержка тёмной темы через `prefers-color-scheme`, обязательная текстовая версия. Любые пользовательские значения выводятся только с автоэкранированием.
+
+**Универсальная отправка.** Любое письмо можно поставить в очередь через `notifications.send(to, template, context)` (рендер + отправка, выполняется задачей `SEND_EMAIL`) или через эндпоинт `POST /api/v1/notifications/email` (тело: `template`, `to`, `payload`, необязательный `idempotency_key`; ответ 202 с `job_id`). Каталог типов и JSON-схем payload - `GET /api/v1/notifications/templates`. Оба эндпоинта доступны только администратору системы (`get_current_admin`: 401 без токена, 403 не админу). Связь «тип письма -> DTO контекста» хранится в одном реестре `EMAIL_CONTEXTS` (`src/dto/emails/`): им пользуются шаблонизатор, эндпоинт и предпросмотр. Письма со своей логикой (например, приглашение, которое проверяет статус перед отправкой) оформляются отдельной задачей и сервисной функцией поверх `send`.
+
+Новое письмо: значение в `EmailTemplate` → DTO контекста и запись в `EMAIL_CONTEXTS` → папка шаблона → образец в `SAMPLE_CONTEXTS` (`src/interfaces/cli/email_preview.py`; без записи в реестре или образца падает параметризованный тест на все шаблоны). Если письмо ставится из кода, а не через внутренний эндпоинт: сервисная функция в `application/notifications/` → вызов `enqueue`. Посмотреть результат: `docker compose run --rm app python -m src.interfaces.cli.email_preview` (HTML и текст сохраняются в `.preview/`, открывай в браузере).
 
 ## Флоу тестирования эндпоинта
 

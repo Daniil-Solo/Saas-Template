@@ -1,0 +1,9 @@
+{% extends "_layout.html.j2" %}
+{% from "_button.html.j2" import button %}
+{% block title %}Добро пожаловать в {{ app_name }}{% endblock %}
+{% block preheader %}Аккаунт создан, можно входить.{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 16px;font-size:22px;line-height:28px;">Здравствуйте, {{ fullname }}!</h1>
+<p style="margin:0;">Ваш аккаунт в {{ app_name }} создан. Теперь вы можете войти и начать работу.</p>
+{{ button(login_url, "Войти") }}
+{% endblock %}

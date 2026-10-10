@@ -24,7 +24,8 @@ export function InvitationLink({ token, email }: InvitationLinkProps) {
   return (
     <div className="flex flex-col gap-2 rounded-md border bg-muted/40 p-3">
       <p className="text-sm">
-        Приглашение для {email} создано. Ссылка показывается один раз — передайте её сами:
+        Приглашение для {email} создано. Письмо с приглашением отправлено на {email}. Если оно не
+        придёт, передайте ссылку вручную — она показывается один раз:
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <input

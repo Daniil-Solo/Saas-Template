@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.responses import JSONResponse
+import structlog
 
 from src.application.auth import bootstrap
 from src.application.exceptions import ApplicationError
@@ -16,6 +17,8 @@ from src.interfaces.api.internal.metrics import router as metrics_router
 from src.interfaces.api.middleware import REQUEST_ID_HEADER, REQUEST_ID_SCOPE_KEY, ObservabilityMiddleware
 from src.interfaces.api.v1 import v1_router
 from src.settings import Settings, get_settings
+
+logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
@@ -46,6 +49,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings.logging)
     setup_sentry(settings.sentry, settings.app, ignored_exceptions=(ApplicationError,))
+    if settings.email.backend == "console":
+        logger.warning(
+            "email_console_backend_enabled",
+            detail="письма не отправляются, а пишутся в лог; задайте EMAIL_BACKEND=smtp|maileroo на продакшене",
+        )
 
     app = FastAPI(title="Backend", lifespan=lifespan)
     app.add_exception_handler(ApplicationError, application_error_handler)  # type: ignore[arg-type]

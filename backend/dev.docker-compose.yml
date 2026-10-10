@@ -46,13 +46,21 @@ services:
           - backend
     command: uvicorn src.interfaces.api.app:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 
-  # Фоновый воркер. Запускается только с профилем: docker compose -f dev.docker-compose.yml --profile worker up
+  # Фоновый воркер arq (письма и др.). Поднимается вместе с app
   worker:
     <<: *app-common
     depends_on: *after-migrate
-    profiles: ["worker"]
     restart: unless-stopped
-    command: python -m src.interfaces.cli.worker
+    command: arq src.interfaces.tasks.worker.WorkerSettings --watch src
+
+  # Необязательно: SMTP-ловушка для проверки EMAIL_BACKEND=smtp. UI: http://localhost:8025, SMTP: mailpit:1025 в сети compose
+  # Запуск: docker compose --profile mail up -d mailpit
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: ["mail"]
+    ports:
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
 
   # Тесты. Запуск: docker compose -f dev.docker-compose.yml run --rm tests [аргументы pytest]
   # Тестовая БД создается и удаляется самими тестами (conftest.py) на сервере db, основная БД не затрагивается

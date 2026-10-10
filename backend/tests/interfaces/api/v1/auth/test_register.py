@@ -3,6 +3,8 @@ import asyncio
 from fastapi import status
 import pytest
 
+from src.constants.emails import EmailTemplate
+from src.constants.tasks import TaskName
 from src.dto.auth import UserLoginDTO
 from src.infrastructure.auth.jwt import decode_access_token
 from src.settings import get_settings
@@ -98,3 +100,30 @@ async def test__success__boundary_password_lengths(container, api, length):
     payload = {"fullname": "Test User", "email": f"boundary{length}@example.com", "password": "a" * length}
 
     (await api.auth.register(payload)).validate()
+
+
+async def test__success__welcome_email_is_enqueued(uow, api, task_queue):
+    data = UserRegisterFactory.build()
+
+    (await api.auth.register(data)).validate()
+
+    async with uow.connection():
+        user = await uow.users.get_by_email(data.email)
+    assert len(task_queue.tasks) == 1
+    task = task_queue.tasks[0]
+    assert task.task == TaskName.SEND_EMAIL
+    assert task.job_id == f"welcome-{user.id}"
+    assert task.payload.to == user.email
+    assert task.payload.template == EmailTemplate.WELCOME
+    assert task.payload.context["fullname"] == data.fullname
+    assert task.payload.context["login_url"].endswith("/login")
+
+
+async def test__failed__duplicated_email_enqueues_nothing(uow, api, task_queue):
+    created_user = (await create_users(uow))[0]
+
+    (await api.auth.register(UserRegisterFactory.build(email=created_user.email))).expected_error_status(
+        status.HTTP_409_CONFLICT, "user_email_exists"
+    )
+
+    assert task_queue.tasks == []

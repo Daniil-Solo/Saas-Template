@@ -3,6 +3,7 @@ import logging
 
 from alembic.config import Config
 import asyncpg
+from dependency_injector import providers
 from httpx import ASGITransport, AsyncClient
 import pytest
 import pytest_asyncio
@@ -15,6 +16,7 @@ from src.infrastructure.sqlalchemy.uow import UnitOfWork
 from src.interfaces.api.app import create_app
 from src.settings import DBSettings, get_settings
 from tests.endpoints.registry import EndpointRegistry
+from tests.fakes.fakes import FakeEmailSender, FakeTaskQueue
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +60,24 @@ async def run_migrations(test_database_name: str) -> AsyncGenerator[None, None]:
         logger.info("Test database %s dropped", test_database_name)
 
 
+@pytest.fixture
+def task_queue() -> FakeTaskQueue:
+    return FakeTaskQueue()
+
+
+@pytest.fixture
+def email_sender() -> FakeEmailSender:
+    return FakeEmailSender()
+
+
 @pytest_asyncio.fixture(scope="function")
-async def container(run_migrations: None) -> AsyncGenerator[Container, None]:
+async def container(
+    run_migrations: None, task_queue: FakeTaskQueue, email_sender: FakeEmailSender
+) -> AsyncGenerator[Container, None]:
     container = await init_container()
+    # Очередь и отправка писем в тестах всегда подменены: письма не уходят, Redis не используется
+    container.task_queue.override(providers.Object(task_queue))
+    container.email_sender.override(providers.Object(email_sender))
 
     engine = await container.engine()
     table_names = ", ".join(table.name for table in metadata.sorted_tables)

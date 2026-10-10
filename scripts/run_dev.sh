@@ -16,7 +16,7 @@ case "$cmd" in
     exit 0
     ;;
   logs)
-    (cd "$ROOT/backend" && docker compose logs --tail=100 app) || true
+    (cd "$ROOT/backend" && docker compose logs --tail=100 app worker) || true
     (cd "$ROOT/frontend" && docker compose logs --tail=100 web) || true
     exit 0
     ;;
@@ -35,7 +35,7 @@ done
 # Общая сеть между backend и frontend
 docker network inspect dev-network >/dev/null 2>&1 || docker network create dev-network >/dev/null
 
-(cd "$ROOT/backend" && docker compose up -d --build app prometheus grafana)
+(cd "$ROOT/backend" && docker compose up -d --build app worker prometheus grafana)
 (cd "$ROOT/frontend" && docker compose up -d --build web)
 
 cat <<MSG
@@ -51,13 +51,15 @@ cat <<MSG
 
 --- Что нужно определить самим ---
  Сейчас (для работы функций, требующих внешних сервисов):
-  * backend/.env: EMAIL_MAILEROO_API_KEY (сейчас "...") - без него письма не отправятся
+  * Письма: по умолчанию EMAIL_BACKEND=console - письма пишутся в лог воркера (cd backend && docker compose logs worker),
+    наружу не уходят. Для реальной отправки: backend/.env - EMAIL_BACKEND=smtp|maileroo и EMAIL_SMTP_* / EMAIL_MAILEROO_API_KEY
   * backend/.env: EMAIL_FROM и EMAIL_FROM_DISPLAY_NAME - адрес и имя отправителя
+  * Проверка SMTP локально: cd backend && docker compose --profile mail up -d mailpit (UI http://localhost:8025)
   * S3-бакет (S3_BUCKET=app): создайте в консоли MinIO, если приложение не создает его само
  Позже (перед выкладкой в production):
   * В корневом .env (из .example.env) заменить все значения <...>
   * AUTH_SECRET_KEY, SECURITY_ENCRYPTION_KEY, DB_PASSWORD, S3_SECRET_KEY, REDIS_PASSWORD - уникальные секреты
   * DOMAIN - домен с DNS-записью на сервер (для HTTPS)
   * Описание продукта в docs/usecases/ и название/брендинг приложения
-  * Фоновый воркер (если нужен): cd backend && docker compose --profile worker up -d
+  * EMAIL_BACKEND=smtp|maileroo и APP_BASE_URL=https://<DOMAIN> (в prod compose APP_BASE_URL задаётся из DOMAIN)
 MSG

@@ -10,6 +10,7 @@ from src.application.exceptions import (
     RoleNotFoundError,
 )
 from src.constants.invitations import InvitationDisplayStatus, InvitationStatus
+from src.constants.tasks import TaskName
 from src.di.container import Container
 from src.dto.common import SuccessOperationDTO
 from src.dto.invitations import (
@@ -21,8 +22,10 @@ from src.dto.invitations import (
 )
 from src.dto.organizations import OrganizationAccessDTO, OrganizationDTO
 from src.dto.roles import RoleDTO
+from src.dto.tasks import SendInvitationEmailDTO
 from src.dto.users import UserDTO
 from src.infrastructure.auth import invitation_token
+from src.infrastructure.queue.interface import TaskQueue
 from src.infrastructure.sqlalchemy.uow import UnitOfWork
 from src.settings import InvitationSettings
 
@@ -61,6 +64,7 @@ async def create(
     access: OrganizationAccessDTO,
     uow: UnitOfWork = Provide[Container.uow],
     settings: InvitationSettings = Provide[Container.invitation_settings],
+    queue: TaskQueue = Provide[Container.task_queue],
 ) -> InvitationCreatedDTO:
     now = _now()
     role_ids = sorted(set(data.role_ids))
@@ -80,6 +84,12 @@ async def create(
             invited_by_id=access.user_id,
             role_ids=role_ids,
         )
+    # После коммита: воркер должен найти приглашение. Токен идёт в payload - в БД только его хеш
+    await queue.enqueue(
+        TaskName.SEND_INVITATION_EMAIL,
+        SendInvitationEmailDTO(invitation_id=record.id, token=token),
+        job_id=f"invitation-{record.id}",
+    )
     return InvitationCreatedDTO(**_to_dto(record, roles, now).model_dump(), token=token)
 
 

@@ -25,6 +25,9 @@ x-backend-common: &backend-common
     dockerfile: prod.Dockerfile
   env_file:
     - .env
+  environment:
+    # Публичный адрес для ссылок в письмах
+    APP_BASE_URL: https://${DOMAIN:?укажите DOMAIN в .env}
   read_only: true
   tmpfs:
     - /tmp
@@ -95,7 +98,7 @@ services:
   # Фоновый воркер. Порты не публикует, ему нужен выход в интернет (внешние API), поэтому сеть edge
   worker:
     <<: *backend-common
-    command: python -m src.interfaces.cli.worker
+    command: arq src.interfaces.tasks.worker.WorkerSettings
     networks:
       - edge
       - data
