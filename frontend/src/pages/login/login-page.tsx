@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { z } from "zod";
 
-import { LoginForm } from "@/features/auth";
+import { buildAuthPath, LoginForm, useNextPath } from "@/features/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 
 const registeredStateSchema = z.object({ registered: z.literal(true) });
@@ -9,6 +9,7 @@ const registeredStateSchema = z.object({ registered: z.literal(true) });
 export function LoginPage() {
   const location = useLocation();
   const justRegistered = registeredStateSchema.safeParse(location.state).success;
+  const next = useNextPath();
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
@@ -28,7 +29,10 @@ export function LoginPage() {
           <LoginForm />
           <p className="text-center text-sm text-muted-foreground">
             Нет аккаунта?{" "}
-            <Link to="/register" className="text-foreground underline underline-offset-4">
+            <Link
+              to={buildAuthPath("/register", next)}
+              className="text-foreground underline underline-offset-4"
+            >
               Зарегистрироваться
             </Link>
           </p>

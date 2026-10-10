@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from src.application.auth import bootstrap
 from src.application.exceptions import ApplicationError
 from src.di.container import init_container, shutdown_container
 from src.dto.common import ErrorDTO
@@ -15,6 +16,7 @@ from src.interfaces.api.v1 import v1_router
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     container = await init_container()
+    await bootstrap.ensure_admin()
     try:
         yield
     finally:

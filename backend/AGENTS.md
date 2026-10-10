@@ -41,15 +41,21 @@
     - auth/ - сервис аутентификации (login, register)
     - health/ - сервис проверки здоровья
     - users/ - сервисы для работы с пользователями
+    - organizations/ - организации (`organizations.py`) и участники (`members.py`)
+    - roles/ - роли (создание и изменение - только администратор)
+    - invitations/ - приглашения: создание, отзыв, просмотр и принятие по токену
+    - permissions/ - перечень прав
     - exceptions.py - кастомные исключения (ApplicationError и др.)
   - di/ - контейнер dependency-injector
     - container.py - объявление всех зависимостей
   - dto/ - Data Transfer Objects для API и Service слоев
     - auth/ - DTO для аутентификации (UserLoginDTO, TokenDTO, UserRegisterDTO)
     - users/ - DTO для пользователей (UserCreateDTO, UserDTO)
+    - organizations/, roles/, invitations/ - DTO организаций, ролей и приглашений
     - common.py - базовые DTO (BaseDTO, SuccessOperationDTO)
   - constants/ - константы и перечисления для сущностей
-    - users.py - enums для User (UserType)
+    - permissions.py - `Permission` (права ролей)
+    - invitations.py - `InvitationStatus` (хранимый) и `InvitationDisplayStatus` (для API)
   - infrastructure/ - коннекторы к базе данных и внешним сервисам
     - auth/ - утилиты аутентификации
       - jwt.py - создание и декодирование JWT
@@ -74,10 +80,12 @@
       - v1/ - эндпоинты версии v1
         - auth/ - аутентификация (POST /api/v1/auth/login, POST /api/v1/auth/register)
         - users/ - управление пользователями (GET/POST /api/v1/users/*)
+        - organizations/ - организации, участники и приглашения организации (/api/v1/organizations/*)
+        - roles/, permissions/, invitations/ - роли, права, принятие приглашений по токену
       - internal/ - внутренние эндпоинты
         - health.py - GET /api/internal/health
       - app.py - точка входа в приложение с объявлением FastAPI
-      - dependencies.py - зависимости для FastAPI (get_current_user)
+      - dependencies.py - зависимости для FastAPI (get_current_user, get_current_admin, require_permission)
       - error_status_mapping.py - маппинг ошибок из бизнес-слоя на HTTP-коды
     - cli/ - команды для запуска
     - tasks/ - фоновые задачи (заглушка)
@@ -94,6 +102,13 @@
 Источник истины - ER-диаграмма `docs/architecture/data_model.md`; модели в `src/infrastructure/sqlalchemy/models.py` должны ей соответствовать.
 
 1. users - пользователи
+2. organizations - организации (создатель - `created_by_id`)
+3. organization_members - участники организаций
+4. roles - глобальные роли (создаёт только администратор системы)
+5. role_permissions - права роли (строковый код из `Permission`)
+6. member_roles - роли участников
+7. invitations - приглашения в организацию (в БД только хеш токена)
+8. invitation_roles - роли приглашений
 
 
 ## Документация - источник истины

@@ -1,10 +1,12 @@
 import { Link, useNavigate } from "react-router";
 
-import { RegisterForm } from "@/features/auth";
+import { buildAuthPath, RegisterForm, useNextPath } from "@/features/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const next = useNextPath();
+  const loginPath = buildAuthPath("/login", next);
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
@@ -16,10 +18,10 @@ export function RegisterPage() {
           <CardDescription>Создайте аккаунт</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <RegisterForm onSuccess={() => navigate("/login", { state: { registered: true } })} />
+          <RegisterForm onSuccess={() => navigate(loginPath, { state: { registered: true } })} />
           <p className="text-center text-sm text-muted-foreground">
             Уже есть аккаунт?{" "}
-            <Link to="/login" className="text-foreground underline underline-offset-4">
+            <Link to={loginPath} className="text-foreground underline underline-offset-4">
               Войти
             </Link>
           </p>
