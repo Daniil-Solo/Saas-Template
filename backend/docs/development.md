@@ -9,7 +9,8 @@
 - `app` - FastAPI, порт 8000, hot reload, код монтируется томом;
 - `worker` - фоновый воркер (профиль `worker`);
 - `tests` - тесты (профиль `tests`);
-- `db` - PostgreSQL, `s3` - MinIO, `redis` - Redis.
+- `db` - PostgreSQL, `s3` - MinIO, `redis` - Redis;
+- `prometheus` - метрики (http://localhost:9090), `grafana` - графики (http://localhost:3000, `admin/admin`, дашборд «HTTP»). Конфиги лежат в `../.infra/`; если порт 3000 занят, задайте `GRAFANA_PORT` в `.env`.
 
 Файл `dev.docker-compose.yml` подключается через переменную `COMPOSE_FILE` из `.env`, поэтому команды выполняются из папки `backend/` как обычный `docker compose ...`. Если контейнер `app` не запущен, вместо `exec` используйте `run --rm app ...`.
 
@@ -20,20 +21,22 @@
 ```bash
 cp .example.env .env                  # значения из примера рабочие для dev
 docker network create dev-network     # один раз; общая сеть с другими проектами (например, frontend)
-docker compose up -d --build app      # поднимает app вместе с db, s3, redis
+docker compose up -d --build app prometheus grafana   # поднимает app вместе с db, redis и мониторингом
 ```
 
 После запуска:
 - API: http://localhost:8000 (документация: http://localhost:8000/docs)
 - консоль MinIO: http://localhost:9001 (логин и пароль - `S3_ACCESS_KEY` и `S3_SECRET_KEY` из `.env`). Бакет `S3_BUCKET` нужно создать в консоли, если приложение не создает его само
 
-Логи: `docker compose logs --tail=100 app`.
+Логи: `docker compose logs --tail=100 app`. Формат задают `LOG_LEVEL` и `LOG_FORMAT` (`console` - для человека, `json` - по записи на строку). Каждый запрос оставляет одну запись `http_request` (метод, шаблон пути, статус, длительность, `request_id`, `user_id`); тот же `request_id` приходит клиенту в заголовке `X-Request-ID`. Тела запросов, заголовки и email в логи не пишутся.
+
+Метрики: `GET /api/internal/metrics` (формат Prometheus, вне OpenAPI, наружу закрыт Caddy; отключаются `METRICS_ENABLED=false`). Ошибки уходят в Sentry только при заданном `SENTRY_DSN`; бизнес-ошибки (`ApplicationError`) не отправляются.
 
 Остановка: `docker compose down` (данные сохраняются в томах). Полная очистка данных: `docker compose down -v` (удаляет данные разработки, делайте это только осознанно).
 
 ### Переменные окружения
 
-Новая переменная добавляется в `src/settings/` и в `.example.env`, затем (если нужно) в локальный `.env`. Секреты в коде и репозитории не хранятся.
+Настройки собраны в едином объекте `Settings` (`get_settings()` в `src/settings/`) по группам с префиксами (`DB_`, `AUTH_`, `LOG_`, `METRICS_`, `SENTRY_` и т.д.). Новая переменная добавляется в соответствующую группу и в `.example.env`, затем (если нужно) в локальный `.env`. Секреты в коде и репозитории не хранятся.
 
 ### Установка зависимостей
 

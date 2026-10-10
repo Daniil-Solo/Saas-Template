@@ -10,10 +10,13 @@ dependencies = [
     "dependency-injector>=4.49.1",
     "email-validator>=2.3.0",
     "fastapi>=0.143.0",
+    "prometheus-client>=0.26.0",
     "psycopg2-binary>=2.9.13",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.1",
+    "sentry-sdk[fastapi]>=2.71.0",
     "sqlalchemy[asyncio]>=2.1.4",
+    "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
 ]
 

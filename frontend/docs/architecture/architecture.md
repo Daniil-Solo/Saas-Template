@@ -15,11 +15,13 @@ flowchart LR
     end
 
     api("Backend API")
+    sentry("Sentry (внешний сервис,<br>опционально)")
 
     user --> ui
     ui --> state
     state --> apiClient
     apiClient -->|"HTTP/JSON, /api/v1/*"| api
+    Client -.->|"необработанные ошибки (если задан VITE_SENTRY_DSN)"| sentry
 ```
 
 ### Слои
@@ -31,13 +33,15 @@ flowchart TD
     app("app: провайдеры, роутер, глобальные стили")
     pages("pages: страницы-маршруты")
     features("features: пользовательские сценарии (формы, действия)")
-    shared("shared: api, ui, lib, config")
+    shared("shared: api, ui, lib, config, observability")
 
     app --> pages
     pages --> features
     pages --> shared
     features --> shared
 ```
+
+`shared/observability` — инициализация Sentry (`initSentry`, вызывается из `app` до рендера) и `setSentryUser` (передаёт только `id`; вызывается из `features/auth`). `app/providers` оборачивает приложение в `Sentry.ErrorBoundary` с fallback «Что-то пошло не так». Ошибки API со статусом < 500 в Sentry не отправляются.
 
 ### Поток данных
 

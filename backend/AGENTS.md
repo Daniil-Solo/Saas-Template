@@ -18,6 +18,7 @@
 - Базы данных: sqlalchemy (Core), alembic, asyncpg (основной), psycopg2-binary (миграции)
 - LLM-пайплайн: openai, jinja2 (шаблон промпта), tiktoken
 - Конфигурация: pydantic-settings
+- Метрики и ошибки: prometheus-client, sentry-sdk
 - Аутентификация: pyjwt, argon2-cffi (хеширование паролей)
 - Хранилище: boto3 (S3)
 - Уведомления: maileroo (сервис отправки писем), jinja2 (шаблон письма)
@@ -75,6 +76,7 @@
     - email_sender/ - отправка email (interface.py, maileroo.py)
     - email_templater/ - шаблоны email (interface.py, jinja2.py)
     - redis/ - Redis клиент
+    - observability/ - логирование (logging.py, structlog), метрики Prometheus (metrics.py), Sentry (sentry.py), контекст запроса (context.py)
   - interfaces/ - различные точки входа в приложение
     - api/ - эндпоинты API
       - v1/ - эндпоинты версии v1
@@ -84,12 +86,14 @@
         - roles/, permissions/, invitations/ - роли, права, принятие приглашений по токену
       - internal/ - внутренние эндпоинты
         - health.py - GET /api/internal/health
+        - metrics.py - GET /api/internal/metrics (метрики Prometheus, вне OpenAPI)
       - app.py - точка входа в приложение с объявлением FastAPI
+      - middleware.py - ASGI-middleware: X-Request-ID, запись `http_request` в логе, HTTP-метрики
       - dependencies.py - зависимости для FastAPI (get_current_user, get_current_admin, require_permission)
       - error_status_mapping.py - маппинг ошибок из бизнес-слоя на HTTP-коды
     - cli/ - команды для запуска
     - tasks/ - фоновые задачи (заглушка)
-  - settings/ - настройки
+  - settings/ - настройки: группы (`DBSettings`, `AuthSettings`, `LoggingSettings`, `MetricsSettings`, `SentrySettings` и др.) и единый `Settings` с `get_settings()`
 - tests/ - тесты (структура зеркалит `src/`)
   - endpoints/ - обертки над эндпоинтами для тестов: `EndpointRegistry` (фикстура `api`), классы групп (`AuthEndpoints`, `UsersEndpoints`, ...), `ResponseWrapper`
   - interfaces/api/v1/{entities}/ - тесты эндпоинтов, один файл на эндпоинт

@@ -13,7 +13,7 @@ from src.di.container import Container, init_container, shutdown_container
 from src.infrastructure.sqlalchemy.models import metadata
 from src.infrastructure.sqlalchemy.uow import UnitOfWork
 from src.interfaces.api.app import create_app
-from src.settings import DBSettings
+from src.settings import DBSettings, get_settings
 from tests.endpoints.registry import EndpointRegistry
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,10 @@ def test_database_name() -> Generator[str, None, None]:
     test_db_name = f"test_{main_settings.name}"
     monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setenv("DB_NAME", test_db_name)
+    get_settings.cache_clear()
     yield test_db_name
     monkeypatch.undo()
+    get_settings.cache_clear()
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)

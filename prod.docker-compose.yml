@@ -7,6 +7,7 @@ name: app
 # Безопасность:
 # - на хосте опубликованы только порты 80 и 443 сервиса caddy, все остальное доступно лишь внутри docker-сетей;
 # - сеть data (internal) не имеет выхода в интернет и подключена только к сервисам, которым нужны db, redis, s3;
+# - сеть monitoring (internal) связывает api, prometheus и grafana; наружу grafana выходит только через caddy (grafana.DOMAIN);
 # - контейнеры работают без root-прав, с отброшенными capabilities и read-only файловой системой;
 # - обязательные секреты не имеют значений по умолчанию: без них compose не запустится.
 
@@ -39,7 +40,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?укажите DOMAIN в .env}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./.infra/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     cap_add:
@@ -51,6 +52,8 @@ services:
         condition: service_started
       api:
         condition: service_healthy
+      grafana:
+        condition: service_started
 
   web:
     <<: *hardened
@@ -59,6 +62,9 @@ services:
       dockerfile: prod.Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-}
+        VITE_APP_RELEASE: ${VITE_APP_RELEASE:-}
     read_only: true
     tmpfs:
       - /tmp
@@ -67,7 +73,7 @@ services:
 
   api:
     <<: *backend-common
-    command: uvicorn src.interfaces.api.app:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips="*"
+    command: uvicorn src.interfaces.api.app:app --host 0.0.0.0 --port 8000 --no-access-log --proxy-headers --forwarded-allow-ips="*"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/internal/health', timeout=3)"]
       interval: 15s
@@ -77,6 +83,7 @@ services:
     networks:
       - edge
       - data
+      - monitoring
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -170,11 +177,59 @@ services:
     networks:
       - data
 
+  # Метрики backend. Порты не публикуются, доступ только из сети monitoring (grafana)
+  prometheus:
+    <<: *hardened
+    image: prom/prometheus:v3.15.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    user: "65534:65534"
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./.infra/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring
+
+  # Графики. Открывается снаружи только через caddy на grafana.DOMAIN, вход по логину и паролю
+  grafana:
+    <<: *hardened
+    image: grafana/grafana:13.2.3
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?укажите GRAFANA_ADMIN_USER в .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?укажите GRAFANA_ADMIN_PASSWORD в .env}
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: https://grafana.${DOMAIN:?укажите DOMAIN в .env}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    user: "472:0"
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./.infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./.infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - edge
+      - monitoring
+    depends_on:
+      - prometheus
+
 networks:
   # Сеть reverse proxy и сервисов, которым нужен доступ в интернет
   edge:
   # Изолированная сеть данных: без выхода наружу
   data:
+    internal: true
+  # Изолированная сеть мониторинга: api отдаёт метрики prometheus, grafana читает prometheus
+  monitoring:
     internal: true
 
 volumes:
@@ -183,3 +238,5 @@ volumes:
   postgres_data:
   minio_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

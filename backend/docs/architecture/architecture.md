@@ -17,14 +17,17 @@ flowchart LR
         db("Реляционная БД")
         storage("Файловое хранилище")
         cache("БД типа 'ключ-значение'")
+        metrics("Сбор метрик и графики")
     end
     subgraph External["Внешние системы"]
         llm("LLM API")
         email("Сервис отправки email")
+        errors("Сервис отслеживания ошибок")
     end
 
     %% Коммуникации внутри
     frontend --> api
+    metrics --> api
 
     api --> db
     api --> cache
@@ -36,6 +39,8 @@ flowchart LR
     api --> email
     api --> llm
     worker --> llm
+    api --> errors
+    frontend --> errors
 
     %% Внешний доступ пользователя
     user --> frontend
@@ -63,6 +68,9 @@ graph LR
     DB[("Основные данные <br>[Container: PostgreSQL]")]:::database
     S3[("Файлы <br>[Container: MinIO / S3]")]:::database
     KVDB[("Rate limiting, кеш <br>[Container: Redis]")]:::database
+    Prom("Метрики <br>[Container: Prometheus]"):::container
+    Grafana("Графики <br>[Container: Grafana]"):::container
+    Sentry["Отслеживание ошибок <br>[Sentry]"]:::existing
 
     %% connections and boundaries %%
     subgraph Legend [Containers]
@@ -76,12 +84,53 @@ graph LR
 
             Worker-.->|"Reads/writes <br> [TCP]"| DB
             Worker-.->|"Reads/writes <br> [HTTP/HTTPS]"| S3
+
+            Prom-.->|"Scrapes /api/internal/metrics <br> [HTTP]"| API
+            Grafana-.->|"Queries <br> [HTTP]"| Prom
         end
         class Boundary boundary
 
         API-.->|"Sends emails <br> [HTTP/HTTPS]"| Email
         API-.->|"Makes requests <br> [HTTP/HTTPS]"| LLM
         Worker-.->|"Makes requests <br> [HTTP/HTTPS]"| LLM
+        API-.->|"Sends errors, optional <br> [HTTPS]"| Sentry
+        Frontend-.->|"Sends errors, optional <br> [HTTPS]"| Sentry
     end
     class Legend frame
+```
+
+### Backend: компоненты наблюдаемости и настройки
+
+Слои — по `backend/AGENTS.md`; `infrastructure` не импортирует `application`.
+
+```mermaid
+flowchart TD
+    subgraph App["create_app"]
+        settings("settings: Settings<br>app, db, auth, invitations, admin,<br>logging, metrics, sentry")
+        mw("interfaces/api/middleware:<br>request_id, лог http_request, метрики")
+        metricsEp("GET /api/internal/metrics<br>(вне OpenAPI)")
+        deps("dependencies.get_current_user:<br>user_id в контекст логов и Sentry")
+    end
+
+    subgraph Obs["infrastructure/observability"]
+        logging("logging: structlog,<br>console | json")
+        metrics("metrics: prometheus-client")
+        sentry("sentry: sentry-sdk,<br>только при заданном SENTRY_DSN")
+    end
+
+    container("DI Container: settings,<br>производные auth/db/invitations/admin")
+    prom("Prometheus")
+    sentryExt("Sentry (внешний)")
+
+    settings --> logging
+    settings --> sentry
+    settings --> metrics
+    settings --> container
+    mw --> logging
+    mw --> metrics
+    deps --> logging
+    deps --> sentry
+    metricsEp --> metrics
+    prom -->|"scrape"| metricsEp
+    sentry -.->|"непредвиденные ошибки,<br>без ApplicationError"| sentryExt
 ```

@@ -9,6 +9,7 @@ from src.application.organizations import organizations as organizations_service
 from src.constants.permissions import Permission
 from src.dto.organizations import OrganizationAccessDTO
 from src.dto.users import UserDTO
+from src.infrastructure.observability import context as observability_context
 
 # auto_error=False: отсутствие токена обрабатываем сами, чтобы вернуть единый формат ошибки
 bearer_scheme = HTTPBearer(auto_error=False, description="JWT access-токен из /api/v1/auth/login или /register")
@@ -19,7 +20,9 @@ async def get_current_user(
 ) -> UserDTO:
     if credentials is None:
         raise InvalidTokenError
-    return await auth_service.authenticate(credentials.credentials)
+    user = await auth_service.authenticate(credentials.credentials)
+    observability_context.bind_user(user.id)
+    return user
 
 
 async def get_current_admin(user: UserDTO = Depends(get_current_user)) -> UserDTO:

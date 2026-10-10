@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import type { UserLoginDto, UserRegisterDto } from "@/shared/api/generated";
 import {
@@ -7,6 +7,8 @@ import {
   loginEndpointApiV1AuthLoginPost,
   registerEndpointApiV1AuthRegisterPost,
 } from "@/shared/api/generated";
+
+import { setSentryUser } from "@/shared/observability/sentry";
 
 import { clearToken, getToken, setToken, subscribeToken } from "./token-storage";
 
@@ -23,11 +25,18 @@ export function useIsAuthenticated(): boolean {
 
 export function useCurrentUser() {
   const token = useAccessToken();
-  return useQuery({
+  const query = useQuery({
     queryKey: currentUserKey,
     queryFn: async () => (await getMeEndpointApiV1UsersMeGet({ throwOnError: true })).data,
     enabled: token !== null,
   });
+  const userId = query.data?.id;
+  useEffect(() => {
+    if (userId !== undefined) {
+      setSentryUser(userId);
+    }
+  }, [userId]);
+  return query;
 }
 
 export function useLogin() {
@@ -51,6 +60,7 @@ export function useLogout() {
   const queryClient = useQueryClient();
   return () => {
     clearToken();
+    setSentryUser(null);
     queryClient.clear();
   };
 }

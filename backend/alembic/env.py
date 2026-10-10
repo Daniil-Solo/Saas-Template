@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, pool
 
 from alembic import context
 from src.infrastructure.sqlalchemy.models import metadata
-from src.settings import DBSettings
+from src.settings import get_settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 target_metadata = metadata
 
 # Подключение берется из настроек приложения (DB_*), а не из alembic.ini
-db_settings = DBSettings()  # type: ignore[call-arg]
+db_settings = get_settings().db
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

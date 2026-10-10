@@ -5,7 +5,7 @@ import pytest
 
 from src.dto.auth import UserLoginDTO
 from src.infrastructure.auth.jwt import decode_access_token
-from src.settings import AuthSettings
+from src.settings import get_settings
 from tests.factories.users import TEST_PASSWORD, UserRegisterFactory
 from tests.helpers.users import create_users
 
@@ -16,7 +16,7 @@ async def test__success(uow, api):
     token = (await api.auth.register(data)).validate()
     assert token.token_type == "bearer"
 
-    auth_settings = AuthSettings()
+    auth_settings = get_settings().auth
     user_id = decode_access_token(token.access_token, auth_settings.secret_key, auth_settings.algorithm)
     async with uow.connection():
         user = await uow.users.get_by_email(data.email)

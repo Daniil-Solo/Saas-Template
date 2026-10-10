@@ -17,4 +17,4 @@ RUN uv sync --no-install-project --frozen
 COPY . /app
 
 # В dev-окружении код монтируется томом (.:/app), поэтому команда запуска переопределяется в compose
-CMD ["uvicorn", "src.interfaces.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.interfaces.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

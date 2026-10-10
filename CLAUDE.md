@@ -7,7 +7,8 @@
 - `backend/` — API (FastAPI, Alembic, pytest); `frontend/` — SPA (React, Vite, biome, vitest, Playwright).
 - `docs/` — `deployment.md` (диаграмма развертывания), `usecases/` (фичи продукта), `workflow.md` (воркфлоу разработки фичи).
 - `.plan/` — локальные планы реализации, в git не коммитятся (`.plan/<YYYYMMDD-HHMM>_<фича>.md`); шаги отмечаются в плане сразу после выполнения — это память между сессиями.
-- `scripts/run_dev.sh` — запуск всего dev-стенда (up|down|logs); `prod.docker-compose.yml` + `Caddyfile` — прод.
+- `.infra/` — конфиги и настроечные файлы инфраструктуры (Prometheus, Grafana и т.п.); монтируются в dev/prod compose.
+- `scripts/run_dev.sh` — запуск всего dev-стенда (up|down|logs); `prod.docker-compose.yml` + `.infra/Caddyfile` — прод.
 
 ## Где что читать
 
@@ -24,7 +25,7 @@
 - Общий код (auth, users, shared, infrastructure) расширять, а не переписывать, если не попросили иначе.
 - Всё запускается в Docker (ruff, mypy, pytest, pnpm, biome, vitest и т.д.); на хост зависимости не ставить. Команды выполнять из `backend/` или `frontend/` через `docker compose ...`.
 - Новая переменная окружения → в код настроек и в `.example.env` соответствующего проекта. Для корня — в `.example.env` (prod). Секреты не коммитить; `VITE_*` публичны.
-- Dev: сеть `dev-network`, frontend проксирует `/api` на `http://backend:8000`. Prod: `prod.docker-compose.yml` + `Caddyfile` в корне.
+- Dev: сеть `dev-network`, frontend проксирует `/api` на `http://backend:8000`. Prod: `prod.docker-compose.yml` в корне + `.infra/Caddyfile`.
 - При изменении dev-окружения обновлять `scripts/run_dev.sh` и его вывод.
 
 ## Ограничения (осторожно)
@@ -34,6 +35,7 @@
 - Миграции Alembic: после изменения моделей генерируй новую миграцию, существующие применённые миграции не правь.
 - Клиент API на фронтенде генерируется (`pnpm gen:api`) — не правь сгенерированные файлы руками; после изменения контракта backend перегенерируй клиент.
 - Не добавляй зависимости без необходимости; только через `uv add` / `pnpm add` в контейнере.
+- После добавления новой библиотеки (изменились `pyproject.toml`/`uv.lock` или `package.json`/lock-файл) пересобери образ Docker (`docker compose build` / `up --build` для затронутого сервиса), иначе контейнер не увидит зависимость.
 
 ## Как работать
 

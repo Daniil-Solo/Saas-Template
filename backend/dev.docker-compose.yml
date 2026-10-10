@@ -44,7 +44,7 @@ services:
         # frontend и другие проекты обращаются к API по адресу http://backend:8000
         aliases:
           - backend
-    command: uvicorn src.interfaces.api.app:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.interfaces.api.app:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 
   # Фоновый воркер. Запускается только с профилем: docker compose -f dev.docker-compose.yml --profile worker up
   worker:
@@ -115,6 +115,39 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Метрики backend. UI: http://localhost:9090. Конфиг и дашборды - в ../observability
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ../.infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    restart: unless-stopped
+
+  # Графики. UI: http://localhost:3000, порт меняется GRAFANA_PORT (логин и пароль - GF_SECURITY_ADMIN_USER и GF_SECURITY_ADMIN_PASSWORD, по умолчанию admin/admin)
+  grafana:
+    image: grafana/grafana:13.2.3
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ../.infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../.infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 networks:
   # Общая сеть для связи с контейнерами из других compose-проектов (например, frontend).
   # Создается один раз: docker network create dev-network
@@ -126,3 +159,5 @@ volumes:
   postgres_data:
   minio_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

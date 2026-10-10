@@ -35,7 +35,7 @@ done
 # Общая сеть между backend и frontend
 docker network inspect dev-network >/dev/null 2>&1 || docker network create dev-network >/dev/null
 
-(cd "$ROOT/backend" && docker compose up -d --build app)
+(cd "$ROOT/backend" && docker compose up -d --build app prometheus grafana)
 (cd "$ROOT/frontend" && docker compose up -d --build web)
 
 cat <<MSG
@@ -44,6 +44,8 @@ cat <<MSG
   Приложение:       http://localhost:5173
   API (Swagger):    http://localhost:8000/docs
   Консоль MinIO:    http://localhost:9001  (minioadmin / minioadmin)
+  Grafana:          http://localhost:3000  (admin / admin, дашборд "HTTP")
+  Prometheus:       http://localhost:9090
 
 Остановить: ./scripts/run_dev.sh down    Логи: ./scripts/run_dev.sh logs
 

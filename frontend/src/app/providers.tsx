@@ -2,6 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { setupAuth } from "@/features/auth";
+import { ErrorBoundary } from "@/shared/observability/sentry";
+
+import { ErrorFallback } from "./error-fallback";
 
 export function createQueryClient(): QueryClient {
   const queryClient = new QueryClient({
@@ -17,5 +20,9 @@ type ProvidersProps = {
 };
 
 export function Providers({ queryClient, children }: ProvidersProps) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <ErrorBoundary fallback={<ErrorFallback />}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ErrorBoundary>
+  );
 }

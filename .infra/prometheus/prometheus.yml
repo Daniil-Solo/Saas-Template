@@ -1,0 +1,10 @@
+# Dev: Prometheus опрашивает backend по имени сервиса app (backend/dev.docker-compose.yml).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: backend
+    metrics_path: /api/internal/metrics
+    static_configs:
+      - targets: ["app:8000"]
