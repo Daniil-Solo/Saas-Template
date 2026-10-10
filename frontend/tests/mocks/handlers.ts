@@ -21,4 +21,7 @@ export const handlers = [
     }
     return HttpResponse.json(makeUser());
   }),
+  // По умолчанию у пользователя нет организаций и ролей: нужные данные тесты задают через server.use
+  http.get(`${API}/organizations`, () => HttpResponse.json([])),
+  http.get(`${API}/roles`, () => HttpResponse.json([])),
 ];

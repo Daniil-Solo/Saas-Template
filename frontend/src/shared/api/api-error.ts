@@ -3,11 +3,24 @@ import { z } from "zod";
 const errorBodySchema = z.object({ code: z.string(), message: z.string() });
 const validationBodySchema = z.object({ detail: z.array(z.unknown()) });
 
-// Тексты для известных кодов ошибок backend (docs/usecases/auth.md)
+// Тексты для известных кодов ошибок backend (docs/usecases/auth.md, docs/usecases/organizations.md)
 const MESSAGES_BY_CODE: Record<string, string> = {
   user_email_exists: "Пользователь с таким email уже существует",
   invalid_credentials: "Неверный email или пароль",
   invalid_token: "Сессия истекла. Войдите снова",
+  organization_not_found: "Организация не найдена",
+  permission_denied: "Недостаточно прав для этого действия",
+  admin_required: "Действие доступно только администратору",
+  member_not_found: "Участник не найден",
+  organization_creator_cannot_leave: "Создатель не может выйти из организации или быть исключён",
+  invitation_not_found: "Приглашение не найдено",
+  invitation_expired: "Срок действия приглашения истёк",
+  invitation_not_pending: "Приглашение уже принято или отозвано",
+  invitation_email_mismatch: "Приглашение выписано на другой email",
+  invitation_already_exists: "Для этого email уже есть действующее приглашение",
+  member_already_exists: "Этот пользователь уже участник организации",
+  role_not_found: "Роль не найдена",
+  role_name_exists: "Роль с таким названием уже существует",
 };
 
 const NETWORK_MESSAGE = "Нет связи с сервером. Попробуйте позже";

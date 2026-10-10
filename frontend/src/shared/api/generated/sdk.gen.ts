@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetMeEndpointApiV1UsersMeGetData, GetMeEndpointApiV1UsersMeGetErrors, GetMeEndpointApiV1UsersMeGetResponses, HealthEndpointApiInternalHealthGetData, HealthEndpointApiInternalHealthGetResponses, LoginEndpointApiV1AuthLoginPostData, LoginEndpointApiV1AuthLoginPostErrors, LoginEndpointApiV1AuthLoginPostResponses, RegisterEndpointApiV1AuthRegisterPostData, RegisterEndpointApiV1AuthRegisterPostErrors, RegisterEndpointApiV1AuthRegisterPostResponses } from './types.gen';
+import type { AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostData, AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostErrors, AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponses, CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostData, CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostErrors, CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponses, CreateOrganizationEndpointApiV1OrganizationsPostData, CreateOrganizationEndpointApiV1OrganizationsPostErrors, CreateOrganizationEndpointApiV1OrganizationsPostResponses, CreateRoleEndpointApiV1RolesPostData, CreateRoleEndpointApiV1RolesPostErrors, CreateRoleEndpointApiV1RolesPostResponses, DeleteRoleEndpointApiV1RolesRoleIdDeleteData, DeleteRoleEndpointApiV1RolesRoleIdDeleteErrors, DeleteRoleEndpointApiV1RolesRoleIdDeleteResponses, GetMeEndpointApiV1UsersMeGetData, GetMeEndpointApiV1UsersMeGetErrors, GetMeEndpointApiV1UsersMeGetResponses, GetOrganizationEndpointApiV1OrganizationsOrgIdGetData, GetOrganizationEndpointApiV1OrganizationsOrgIdGetErrors, GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponses, HealthEndpointApiInternalHealthGetData, HealthEndpointApiInternalHealthGetResponses, ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetData, ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetErrors, ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponses, ListMembersEndpointApiV1OrganizationsOrgIdMembersGetData, ListMembersEndpointApiV1OrganizationsOrgIdMembersGetErrors, ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponses, ListOrganizationsEndpointApiV1OrganizationsGetData, ListOrganizationsEndpointApiV1OrganizationsGetResponses, ListPermissionsEndpointApiV1PermissionsGetData, ListPermissionsEndpointApiV1PermissionsGetResponses, ListRolesEndpointApiV1RolesGetData, ListRolesEndpointApiV1RolesGetResponses, LoginEndpointApiV1AuthLoginPostData, LoginEndpointApiV1AuthLoginPostErrors, LoginEndpointApiV1AuthLoginPostResponses, PreviewInvitationEndpointApiV1InvitationsTokenGetData, PreviewInvitationEndpointApiV1InvitationsTokenGetErrors, PreviewInvitationEndpointApiV1InvitationsTokenGetResponses, RegisterEndpointApiV1AuthRegisterPostData, RegisterEndpointApiV1AuthRegisterPostErrors, RegisterEndpointApiV1AuthRegisterPostResponses, RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteData, RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteErrors, RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponses, RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteData, RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteErrors, RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponses, UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutData, UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutErrors, UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponses, UpdateRoleEndpointApiV1RolesRoleIdPutData, UpdateRoleEndpointApiV1RolesRoleIdPutErrors, UpdateRoleEndpointApiV1RolesRoleIdPutResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -48,6 +48,170 @@ export const loginEndpointApiV1AuthLoginPost = <ThrowOnError extends boolean = f
 export const getMeEndpointApiV1UsersMeGet = <ThrowOnError extends boolean = false>(options?: Options<GetMeEndpointApiV1UsersMeGetData, ThrowOnError>): RequestResult<GetMeEndpointApiV1UsersMeGetResponses, GetMeEndpointApiV1UsersMeGetErrors, ThrowOnError> => (options?.client ?? client).get<GetMeEndpointApiV1UsersMeGetResponses, GetMeEndpointApiV1UsersMeGetErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/users/me',
+    ...options
+});
+
+/**
+ * Мои организации
+ */
+export const listOrganizationsEndpointApiV1OrganizationsGet = <ThrowOnError extends boolean = false>(options?: Options<ListOrganizationsEndpointApiV1OrganizationsGetData, ThrowOnError>): RequestResult<ListOrganizationsEndpointApiV1OrganizationsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListOrganizationsEndpointApiV1OrganizationsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations',
+    ...options
+});
+
+/**
+ * Создать организацию
+ */
+export const createOrganizationEndpointApiV1OrganizationsPost = <ThrowOnError extends boolean = false>(options: Options<CreateOrganizationEndpointApiV1OrganizationsPostData, ThrowOnError>): RequestResult<CreateOrganizationEndpointApiV1OrganizationsPostResponses, CreateOrganizationEndpointApiV1OrganizationsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateOrganizationEndpointApiV1OrganizationsPostResponses, CreateOrganizationEndpointApiV1OrganizationsPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Организация с правами текущего пользователя
+ */
+export const getOrganizationEndpointApiV1OrganizationsOrgIdGet = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationEndpointApiV1OrganizationsOrgIdGetData, ThrowOnError>): RequestResult<GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponses, GetOrganizationEndpointApiV1OrganizationsOrgIdGetErrors, ThrowOnError> => (options.client ?? client).get<GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponses, GetOrganizationEndpointApiV1OrganizationsOrgIdGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}',
+    ...options
+});
+
+/**
+ * Участники организации
+ */
+export const listMembersEndpointApiV1OrganizationsOrgIdMembersGet = <ThrowOnError extends boolean = false>(options: Options<ListMembersEndpointApiV1OrganizationsOrgIdMembersGetData, ThrowOnError>): RequestResult<ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponses, ListMembersEndpointApiV1OrganizationsOrgIdMembersGetErrors, ThrowOnError> => (options.client ?? client).get<ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponses, ListMembersEndpointApiV1OrganizationsOrgIdMembersGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}/members',
+    ...options
+});
+
+/**
+ * Заменить роли участника
+ */
+export const updateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPut = <ThrowOnError extends boolean = false>(options: Options<UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutData, ThrowOnError>): RequestResult<UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponses, UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutErrors, ThrowOnError> => (options.client ?? client).put<UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponses, UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}/members/{member_id}/roles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Исключить участника или выйти из организации
+ */
+export const removeMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDelete = <ThrowOnError extends boolean = false>(options: Options<RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteData, ThrowOnError>): RequestResult<RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponses, RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponses, RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}/members/{member_id}',
+    ...options
+});
+
+/**
+ * Приглашения организации
+ */
+export const listInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGet = <ThrowOnError extends boolean = false>(options: Options<ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetData, ThrowOnError>): RequestResult<ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponses, ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetErrors, ThrowOnError> => (options.client ?? client).get<ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponses, ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}/invitations',
+    ...options
+});
+
+/**
+ * Создать приглашение
+ */
+export const createInvitationEndpointApiV1OrganizationsOrgIdInvitationsPost = <ThrowOnError extends boolean = false>(options: Options<CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostData, ThrowOnError>): RequestResult<CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponses, CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponses, CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}/invitations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Отозвать приглашение
+ */
+export const revokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDelete = <ThrowOnError extends boolean = false>(options: Options<RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteData, ThrowOnError>): RequestResult<RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponses, RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponses, RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{org_id}/invitations/{invitation_id}',
+    ...options
+});
+
+/**
+ * Список ролей
+ */
+export const listRolesEndpointApiV1RolesGet = <ThrowOnError extends boolean = false>(options?: Options<ListRolesEndpointApiV1RolesGetData, ThrowOnError>): RequestResult<ListRolesEndpointApiV1RolesGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListRolesEndpointApiV1RolesGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/roles',
+    ...options
+});
+
+/**
+ * Создать роль (администратор)
+ */
+export const createRoleEndpointApiV1RolesPost = <ThrowOnError extends boolean = false>(options: Options<CreateRoleEndpointApiV1RolesPostData, ThrowOnError>): RequestResult<CreateRoleEndpointApiV1RolesPostResponses, CreateRoleEndpointApiV1RolesPostErrors, ThrowOnError> => (options.client ?? client).post<CreateRoleEndpointApiV1RolesPostResponses, CreateRoleEndpointApiV1RolesPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/roles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Удалить роль (администратор)
+ */
+export const deleteRoleEndpointApiV1RolesRoleIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteRoleEndpointApiV1RolesRoleIdDeleteData, ThrowOnError>): RequestResult<DeleteRoleEndpointApiV1RolesRoleIdDeleteResponses, DeleteRoleEndpointApiV1RolesRoleIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteRoleEndpointApiV1RolesRoleIdDeleteResponses, DeleteRoleEndpointApiV1RolesRoleIdDeleteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/roles/{role_id}',
+    ...options
+});
+
+/**
+ * Изменить роль (администратор)
+ */
+export const updateRoleEndpointApiV1RolesRoleIdPut = <ThrowOnError extends boolean = false>(options: Options<UpdateRoleEndpointApiV1RolesRoleIdPutData, ThrowOnError>): RequestResult<UpdateRoleEndpointApiV1RolesRoleIdPutResponses, UpdateRoleEndpointApiV1RolesRoleIdPutErrors, ThrowOnError> => (options.client ?? client).put<UpdateRoleEndpointApiV1RolesRoleIdPutResponses, UpdateRoleEndpointApiV1RolesRoleIdPutErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/roles/{role_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Просмотр приглашения по токену
+ */
+export const previewInvitationEndpointApiV1InvitationsTokenGet = <ThrowOnError extends boolean = false>(options: Options<PreviewInvitationEndpointApiV1InvitationsTokenGetData, ThrowOnError>): RequestResult<PreviewInvitationEndpointApiV1InvitationsTokenGetResponses, PreviewInvitationEndpointApiV1InvitationsTokenGetErrors, ThrowOnError> => (options.client ?? client).get<PreviewInvitationEndpointApiV1InvitationsTokenGetResponses, PreviewInvitationEndpointApiV1InvitationsTokenGetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/invitations/{token}',
+    ...options
+});
+
+/**
+ * Принять приглашение
+ */
+export const acceptInvitationEndpointApiV1InvitationsTokenAcceptPost = <ThrowOnError extends boolean = false>(options: Options<AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostData, ThrowOnError>): RequestResult<AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponses, AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostErrors, ThrowOnError> => (options.client ?? client).post<AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponses, AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/invitations/{token}/accept',
+    ...options
+});
+
+/**
+ * Все права системы
+ */
+export const listPermissionsEndpointApiV1PermissionsGet = <ThrowOnError extends boolean = false>(options?: Options<ListPermissionsEndpointApiV1PermissionsGetData, ThrowOnError>): RequestResult<ListPermissionsEndpointApiV1PermissionsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListPermissionsEndpointApiV1PermissionsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/permissions',
     ...options
 });
 

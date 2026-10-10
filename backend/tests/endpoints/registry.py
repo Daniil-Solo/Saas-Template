@@ -2,6 +2,9 @@ from httpx import AsyncClient
 
 from tests.endpoints.auth import AuthEndpoints
 from tests.endpoints.internal import InternalEndpoints
+from tests.endpoints.invitations import InvitationsEndpoints
+from tests.endpoints.organizations import OrganizationsEndpoints
+from tests.endpoints.roles import PermissionsEndpoints, RolesEndpoints
 from tests.endpoints.users import UsersEndpoints
 
 
@@ -15,6 +18,10 @@ class EndpointRegistry:
         self._auth = AuthEndpoints(client)
         self._users = UsersEndpoints(client)
         self._internal = InternalEndpoints(client)
+        self._organizations = OrganizationsEndpoints(client)
+        self._invitations = InvitationsEndpoints(client)
+        self._roles = RolesEndpoints(client)
+        self._permissions = PermissionsEndpoints(client)
 
     @property
     def auth(self) -> AuthEndpoints:
@@ -27,3 +34,19 @@ class EndpointRegistry:
     @property
     def internal(self) -> InternalEndpoints:
         return self._internal
+
+    @property
+    def organizations(self) -> OrganizationsEndpoints:
+        return self._organizations
+
+    @property
+    def invitations(self) -> InvitationsEndpoints:
+        return self._invitations
+
+    @property
+    def roles(self) -> RolesEndpoints:
+        return self._roles
+
+    @property
+    def permissions(self) -> PermissionsEndpoints:
+        return self._permissions

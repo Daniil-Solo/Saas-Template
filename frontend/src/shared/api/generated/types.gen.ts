@@ -33,6 +33,424 @@ export type HttpValidationError = {
 };
 
 /**
+ * InvitationCreateDTO
+ */
+export type InvitationCreateDto = {
+    /**
+     * Email
+     *
+     * Email приглашаемого (в нижнем регистре)
+     */
+    email: string;
+    /**
+     * Role Ids
+     *
+     * ID ролей, которые получит приглашённый
+     */
+    role_ids?: Array<number>;
+};
+
+/**
+ * InvitationCreatedDTO
+ */
+export type InvitationCreatedDto = {
+    /**
+     * Id
+     *
+     * ID приглашения
+     */
+    id: number;
+    /**
+     * Organization Id
+     *
+     * ID организации
+     */
+    organization_id: number;
+    /**
+     * Email
+     *
+     * Email приглашаемого
+     */
+    email: string;
+    /**
+     * Статус: active, accepted, revoked, expired
+     */
+    status: InvitationDisplayStatus;
+    /**
+     * Roles
+     *
+     * Роли, которые получит приглашённый (удалённые роли не показываются)
+     */
+    roles: Array<RoleDto>;
+    /**
+     * Expires At
+     *
+     * Срок действия
+     */
+    expires_at: string;
+    /**
+     * Invited By Id
+     *
+     * ID пригласившего (null, если пользователь удалён)
+     */
+    invited_by_id: number | null;
+    /**
+     * Created At
+     *
+     * Дата создания
+     */
+    created_at: string;
+    /**
+     * Accepted At
+     *
+     * Дата принятия
+     */
+    accepted_at: string | null;
+    /**
+     * Token
+     *
+     * Токен приглашения для ссылки; показывается только один раз
+     */
+    token: string;
+};
+
+/**
+ * InvitationDTO
+ */
+export type InvitationDto = {
+    /**
+     * Id
+     *
+     * ID приглашения
+     */
+    id: number;
+    /**
+     * Organization Id
+     *
+     * ID организации
+     */
+    organization_id: number;
+    /**
+     * Email
+     *
+     * Email приглашаемого
+     */
+    email: string;
+    /**
+     * Статус: active, accepted, revoked, expired
+     */
+    status: InvitationDisplayStatus;
+    /**
+     * Roles
+     *
+     * Роли, которые получит приглашённый (удалённые роли не показываются)
+     */
+    roles: Array<RoleDto>;
+    /**
+     * Expires At
+     *
+     * Срок действия
+     */
+    expires_at: string;
+    /**
+     * Invited By Id
+     *
+     * ID пригласившего (null, если пользователь удалён)
+     */
+    invited_by_id: number | null;
+    /**
+     * Created At
+     *
+     * Дата создания
+     */
+    created_at: string;
+    /**
+     * Accepted At
+     *
+     * Дата принятия
+     */
+    accepted_at: string | null;
+};
+
+/**
+ * InvitationDisplayStatus
+ *
+ * Статус приглашения для API: хранимый статус плюс вычисляемое «истекло».
+ */
+export type InvitationDisplayStatus = 'active' | 'accepted' | 'revoked' | 'expired';
+
+/**
+ * InvitationPreviewDTO
+ */
+export type InvitationPreviewDto = {
+    /**
+     * Organization Id
+     *
+     * ID организации
+     */
+    organization_id: number;
+    /**
+     * Organization Name
+     *
+     * Название организации
+     */
+    organization_name: string;
+    /**
+     * Email
+     *
+     * Email, на который выдано приглашение
+     */
+    email: string;
+    /**
+     * Статус: active, accepted, revoked, expired
+     */
+    status: InvitationDisplayStatus;
+    /**
+     * Roles
+     *
+     * Роли, которые получит приглашённый
+     */
+    roles: Array<RoleDto>;
+    /**
+     * Expires At
+     *
+     * Срок действия
+     */
+    expires_at: string;
+};
+
+/**
+ * MemberDTO
+ */
+export type MemberDto = {
+    /**
+     * Id
+     *
+     * ID участника
+     */
+    id: number;
+    /**
+     * Organization Id
+     *
+     * ID организации
+     */
+    organization_id: number;
+    /**
+     * Пользователь
+     */
+    user: MemberUserDto;
+    /**
+     * Roles
+     *
+     * Роли участника
+     */
+    roles: Array<RoleDto>;
+    /**
+     * Is Creator
+     *
+     * Является ли участник создателем организации
+     */
+    is_creator: boolean;
+    /**
+     * Created At
+     *
+     * Дата вступления
+     */
+    created_at: string;
+};
+
+/**
+ * MemberRolesUpdateDTO
+ */
+export type MemberRolesUpdateDto = {
+    /**
+     * Role Ids
+     *
+     * Полный набор ID ролей участника
+     */
+    role_ids: Array<number>;
+};
+
+/**
+ * MemberUserDTO
+ */
+export type MemberUserDto = {
+    /**
+     * Id
+     *
+     * ID пользователя
+     */
+    id: number;
+    /**
+     * Fullname
+     *
+     * ФИО пользователя
+     */
+    fullname: string;
+    /**
+     * Email
+     *
+     * Email пользователя
+     */
+    email: string;
+};
+
+/**
+ * OrganizationCreateDTO
+ */
+export type OrganizationCreateDto = {
+    /**
+     * Name
+     *
+     * Название организации
+     */
+    name: string;
+};
+
+/**
+ * OrganizationDTO
+ */
+export type OrganizationDto = {
+    /**
+     * Id
+     *
+     * ID организации
+     */
+    id: number;
+    /**
+     * Name
+     *
+     * Название организации
+     */
+    name: string;
+    /**
+     * Created By Id
+     *
+     * ID пользователя-создателя
+     */
+    created_by_id: number;
+    /**
+     * Created At
+     *
+     * Дата создания
+     */
+    created_at: string;
+};
+
+/**
+ * OrganizationDetailDTO
+ */
+export type OrganizationDetailDto = {
+    /**
+     * Id
+     *
+     * ID организации
+     */
+    id: number;
+    /**
+     * Name
+     *
+     * Название организации
+     */
+    name: string;
+    /**
+     * Created By Id
+     *
+     * ID пользователя-создателя
+     */
+    created_by_id: number;
+    /**
+     * Created At
+     *
+     * Дата создания
+     */
+    created_at: string;
+    /**
+     * Permissions
+     *
+     * Права текущего пользователя в организации
+     */
+    permissions: Array<Permission>;
+    /**
+     * Is Creator
+     *
+     * Является ли текущий пользователь создателем организации
+     */
+    is_creator: boolean;
+};
+
+/**
+ * Permission
+ */
+export type Permission = 'members:manage' | 'invitations:manage';
+
+/**
+ * RoleCreateDTO
+ */
+export type RoleCreateDto = {
+    /**
+     * Name
+     *
+     * Название роли (уникально)
+     */
+    name: string;
+    /**
+     * Permissions
+     *
+     * Права, входящие в роль
+     */
+    permissions?: Array<Permission>;
+};
+
+/**
+ * RoleDTO
+ */
+export type RoleDto = {
+    /**
+     * Id
+     *
+     * ID роли
+     */
+    id: number;
+    /**
+     * Name
+     *
+     * Название роли
+     */
+    name: string;
+    /**
+     * Permissions
+     *
+     * Права, входящие в роль
+     */
+    permissions: Array<Permission>;
+    /**
+     * Created At
+     *
+     * Дата создания
+     */
+    created_at: string;
+};
+
+/**
+ * RoleUpdateDTO
+ */
+export type RoleUpdateDto = {
+    /**
+     * Name
+     *
+     * Новое название роли
+     */
+    name?: string | null;
+    /**
+     * Permissions
+     *
+     * Новый полный набор прав роли
+     */
+    permissions?: Array<Permission> | null;
+};
+
+/**
  * SuccessOperationDTO
  */
 export type SuccessOperationDto = {
@@ -256,6 +674,556 @@ export type GetMeEndpointApiV1UsersMeGetResponses = {
 };
 
 export type GetMeEndpointApiV1UsersMeGetResponse = GetMeEndpointApiV1UsersMeGetResponses[keyof GetMeEndpointApiV1UsersMeGetResponses];
+
+export type ListOrganizationsEndpointApiV1OrganizationsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations';
+};
+
+export type ListOrganizationsEndpointApiV1OrganizationsGetResponses = {
+    /**
+     * Response List Organizations Endpoint Api V1 Organizations Get
+     *
+     * Successful Response
+     */
+    200: Array<OrganizationDto>;
+};
+
+export type ListOrganizationsEndpointApiV1OrganizationsGetResponse = ListOrganizationsEndpointApiV1OrganizationsGetResponses[keyof ListOrganizationsEndpointApiV1OrganizationsGetResponses];
+
+export type CreateOrganizationEndpointApiV1OrganizationsPostData = {
+    body: OrganizationCreateDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations';
+};
+
+export type CreateOrganizationEndpointApiV1OrganizationsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateOrganizationEndpointApiV1OrganizationsPostError = CreateOrganizationEndpointApiV1OrganizationsPostErrors[keyof CreateOrganizationEndpointApiV1OrganizationsPostErrors];
+
+export type CreateOrganizationEndpointApiV1OrganizationsPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationDto;
+};
+
+export type CreateOrganizationEndpointApiV1OrganizationsPostResponse = CreateOrganizationEndpointApiV1OrganizationsPostResponses[keyof CreateOrganizationEndpointApiV1OrganizationsPostResponses];
+
+export type GetOrganizationEndpointApiV1OrganizationsOrgIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}';
+};
+
+export type GetOrganizationEndpointApiV1OrganizationsOrgIdGetErrors = {
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetOrganizationEndpointApiV1OrganizationsOrgIdGetError = GetOrganizationEndpointApiV1OrganizationsOrgIdGetErrors[keyof GetOrganizationEndpointApiV1OrganizationsOrgIdGetErrors];
+
+export type GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationDetailDto;
+};
+
+export type GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponse = GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponses[keyof GetOrganizationEndpointApiV1OrganizationsOrgIdGetResponses];
+
+export type ListMembersEndpointApiV1OrganizationsOrgIdMembersGetData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}/members';
+};
+
+export type ListMembersEndpointApiV1OrganizationsOrgIdMembersGetErrors = {
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMembersEndpointApiV1OrganizationsOrgIdMembersGetError = ListMembersEndpointApiV1OrganizationsOrgIdMembersGetErrors[keyof ListMembersEndpointApiV1OrganizationsOrgIdMembersGetErrors];
+
+export type ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponses = {
+    /**
+     * Response List Members Endpoint Api V1 Organizations  Org Id  Members Get
+     *
+     * Successful Response
+     */
+    200: Array<MemberDto>;
+};
+
+export type ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponse = ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponses[keyof ListMembersEndpointApiV1OrganizationsOrgIdMembersGetResponses];
+
+export type UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutData = {
+    body: MemberRolesUpdateDto;
+    path: {
+        /**
+         * Member Id
+         */
+        member_id: number;
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}/members/{member_id}/roles';
+};
+
+export type UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutErrors = {
+    /**
+     * Нет нужного права (permission_denied)
+     */
+    403: ErrorDto;
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutError = UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutErrors[keyof UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutErrors];
+
+export type UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: MemberDto;
+};
+
+export type UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponse = UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponses[keyof UpdateMemberRolesEndpointApiV1OrganizationsOrgIdMembersMemberIdRolesPutResponses];
+
+export type RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Member Id
+         */
+        member_id: number;
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}/members/{member_id}';
+};
+
+export type RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteErrors = {
+    /**
+     * Нет нужного права (permission_denied)
+     */
+    403: ErrorDto;
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Создатель не может выйти или быть исключён (organization_creator_cannot_leave)
+     */
+    409: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteError = RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteErrors[keyof RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteErrors];
+
+export type RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuccessOperationDto;
+};
+
+export type RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponse = RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponses[keyof RemoveMemberEndpointApiV1OrganizationsOrgIdMembersMemberIdDeleteResponses];
+
+export type ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}/invitations';
+};
+
+export type ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetErrors = {
+    /**
+     * Нет нужного права (permission_denied)
+     */
+    403: ErrorDto;
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetError = ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetErrors[keyof ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetErrors];
+
+export type ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponses = {
+    /**
+     * Response List Invitations Endpoint Api V1 Organizations  Org Id  Invitations Get
+     *
+     * Successful Response
+     */
+    200: Array<InvitationDto>;
+};
+
+export type ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponse = ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponses[keyof ListInvitationsEndpointApiV1OrganizationsOrgIdInvitationsGetResponses];
+
+export type CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostData = {
+    body: InvitationCreateDto;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}/invitations';
+};
+
+export type CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostErrors = {
+    /**
+     * Нет нужного права (permission_denied)
+     */
+    403: ErrorDto;
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostError = CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostErrors[keyof CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostErrors];
+
+export type CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: InvitationCreatedDto;
+};
+
+export type CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponse = CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponses[keyof CreateInvitationEndpointApiV1OrganizationsOrgIdInvitationsPostResponses];
+
+export type RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Invitation Id
+         */
+        invitation_id: number;
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{org_id}/invitations/{invitation_id}';
+};
+
+export type RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteErrors = {
+    /**
+     * Нет нужного права (permission_denied)
+     */
+    403: ErrorDto;
+    /**
+     * Организация не найдена или пользователь не её участник (organization_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteError = RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteErrors[keyof RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteErrors];
+
+export type RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuccessOperationDto;
+};
+
+export type RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponse = RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponses[keyof RevokeInvitationEndpointApiV1OrganizationsOrgIdInvitationsInvitationIdDeleteResponses];
+
+export type ListRolesEndpointApiV1RolesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/roles';
+};
+
+export type ListRolesEndpointApiV1RolesGetResponses = {
+    /**
+     * Response List Roles Endpoint Api V1 Roles Get
+     *
+     * Successful Response
+     */
+    200: Array<RoleDto>;
+};
+
+export type ListRolesEndpointApiV1RolesGetResponse = ListRolesEndpointApiV1RolesGetResponses[keyof ListRolesEndpointApiV1RolesGetResponses];
+
+export type CreateRoleEndpointApiV1RolesPostData = {
+    body: RoleCreateDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/roles';
+};
+
+export type CreateRoleEndpointApiV1RolesPostErrors = {
+    /**
+     * Не администратор системы (admin_required)
+     */
+    403: ErrorDto;
+    /**
+     * Имя роли занято (role_name_exists)
+     */
+    409: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateRoleEndpointApiV1RolesPostError = CreateRoleEndpointApiV1RolesPostErrors[keyof CreateRoleEndpointApiV1RolesPostErrors];
+
+export type CreateRoleEndpointApiV1RolesPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RoleDto;
+};
+
+export type CreateRoleEndpointApiV1RolesPostResponse = CreateRoleEndpointApiV1RolesPostResponses[keyof CreateRoleEndpointApiV1RolesPostResponses];
+
+export type DeleteRoleEndpointApiV1RolesRoleIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Role Id
+         */
+        role_id: number;
+    };
+    query?: never;
+    url: '/api/v1/roles/{role_id}';
+};
+
+export type DeleteRoleEndpointApiV1RolesRoleIdDeleteErrors = {
+    /**
+     * Не администратор системы (admin_required)
+     */
+    403: ErrorDto;
+    /**
+     * Роль не найдена (role_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteRoleEndpointApiV1RolesRoleIdDeleteError = DeleteRoleEndpointApiV1RolesRoleIdDeleteErrors[keyof DeleteRoleEndpointApiV1RolesRoleIdDeleteErrors];
+
+export type DeleteRoleEndpointApiV1RolesRoleIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuccessOperationDto;
+};
+
+export type DeleteRoleEndpointApiV1RolesRoleIdDeleteResponse = DeleteRoleEndpointApiV1RolesRoleIdDeleteResponses[keyof DeleteRoleEndpointApiV1RolesRoleIdDeleteResponses];
+
+export type UpdateRoleEndpointApiV1RolesRoleIdPutData = {
+    body: RoleUpdateDto;
+    path: {
+        /**
+         * Role Id
+         */
+        role_id: number;
+    };
+    query?: never;
+    url: '/api/v1/roles/{role_id}';
+};
+
+export type UpdateRoleEndpointApiV1RolesRoleIdPutErrors = {
+    /**
+     * Не администратор системы (admin_required)
+     */
+    403: ErrorDto;
+    /**
+     * Роль не найдена (role_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Имя роли занято (role_name_exists)
+     */
+    409: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateRoleEndpointApiV1RolesRoleIdPutError = UpdateRoleEndpointApiV1RolesRoleIdPutErrors[keyof UpdateRoleEndpointApiV1RolesRoleIdPutErrors];
+
+export type UpdateRoleEndpointApiV1RolesRoleIdPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: RoleDto;
+};
+
+export type UpdateRoleEndpointApiV1RolesRoleIdPutResponse = UpdateRoleEndpointApiV1RolesRoleIdPutResponses[keyof UpdateRoleEndpointApiV1RolesRoleIdPutResponses];
+
+export type PreviewInvitationEndpointApiV1InvitationsTokenGetData = {
+    body?: never;
+    path: {
+        /**
+         * Token
+         */
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/invitations/{token}';
+};
+
+export type PreviewInvitationEndpointApiV1InvitationsTokenGetErrors = {
+    /**
+     * Приглашение не найдено (invitation_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PreviewInvitationEndpointApiV1InvitationsTokenGetError = PreviewInvitationEndpointApiV1InvitationsTokenGetErrors[keyof PreviewInvitationEndpointApiV1InvitationsTokenGetErrors];
+
+export type PreviewInvitationEndpointApiV1InvitationsTokenGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: InvitationPreviewDto;
+};
+
+export type PreviewInvitationEndpointApiV1InvitationsTokenGetResponse = PreviewInvitationEndpointApiV1InvitationsTokenGetResponses[keyof PreviewInvitationEndpointApiV1InvitationsTokenGetResponses];
+
+export type AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostData = {
+    body?: never;
+    path: {
+        /**
+         * Token
+         */
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/invitations/{token}/accept';
+};
+
+export type AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostErrors = {
+    /**
+     * Другой email (invitation_email_mismatch)
+     */
+    403: ErrorDto;
+    /**
+     * Приглашение не найдено (invitation_not_found)
+     */
+    404: ErrorDto;
+    /**
+     * Приглашение принято или отозвано (invitation_not_pending), пользователь уже участник (member_already_exists)
+     */
+    409: ErrorDto;
+    /**
+     * Срок истёк (invitation_expired)
+     */
+    410: ErrorDto;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostError = AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostErrors[keyof AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostErrors];
+
+export type AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationDto;
+};
+
+export type AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponse = AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponses[keyof AcceptInvitationEndpointApiV1InvitationsTokenAcceptPostResponses];
+
+export type ListPermissionsEndpointApiV1PermissionsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/permissions';
+};
+
+export type ListPermissionsEndpointApiV1PermissionsGetResponses = {
+    /**
+     * Response List Permissions Endpoint Api V1 Permissions Get
+     *
+     * Successful Response
+     */
+    200: Array<Permission>;
+};
+
+export type ListPermissionsEndpointApiV1PermissionsGetResponse = ListPermissionsEndpointApiV1PermissionsGetResponses[keyof ListPermissionsEndpointApiV1PermissionsGetResponses];
 
 export type HealthEndpointApiInternalHealthGetData = {
     body?: never;
